@@ -561,6 +561,199 @@ h1, h2, h3, h4, h5, h6 {
   gap: 1.5rem;
 }
 
+/* ==========================================================================
+   Clario Aesthetic Design System (Tactile Claymorphism & Soft Frosted Glass)
+   ========================================================================== */
+
+.clario-canvas {
+  background-color: #eef2f6;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+[data-theme="dark"] .clario-canvas {
+  background-color: #0b1120;
+}
+
+.clario-master-card {
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .clario-master-card {
+  background: #111a2e;
+  border-color: rgba(30, 41, 59, 0.8);
+  box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.4);
+}
+
+/* Tactile Pill Buttons */
+.clario-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.clario-pill:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .clario-pill {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .clario-pill:hover {
+  background: #273549;
+}
+
+/* Tactile Inset Button */
+.clario-tactile-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.clario-tactile-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .clario-tactile-btn {
+  background: #172138;
+  border-color: #24344d;
+  color: #cbd5e1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .clario-tactile-btn:hover {
+  background: #1f2c4a;
+  border-color: #384f73;
+}
+
+/* Event Cards on Grid */
+.clario-card-lavender {
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.85) 0%, rgba(129, 140, 248, 0.85) 100%);
+  border-radius: 18px;
+  padding: 0.85rem;
+  color: #0f172a;
+  box-shadow: 0 8px 20px -4px rgba(129, 140, 248, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clario-card-lavender:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -4px rgba(129, 140, 248, 0.5);
+}
+
+.clario-card-lime {
+  background: linear-gradient(135deg, #a3e635 0%, #84cc16 100%);
+  border-radius: 18px;
+  padding: 0.85rem;
+  color: #14532d;
+  box-shadow: 0 8px 20px -4px rgba(132, 204, 22, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clario-card-lime:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -4px rgba(132, 204, 22, 0.5);
+}
+
+.clario-card-rose {
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.9) 0%, rgba(244, 63, 94, 0.9) 100%);
+  border-radius: 18px;
+  padding: 0.85rem;
+  color: #ffffff;
+  box-shadow: 0 8px 20px -4px rgba(244, 63, 94, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clario-card-rose:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -4px rgba(244, 63, 94, 0.5);
+}
+
+/* Floating Dark Inspector Card */
+.clario-dark-inspector {
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  padding: 1.5rem;
+  color: #ffffff;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  animation: floatIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.clario-dark-pill {
+  background: #171d2c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 0.6rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Free Time Diagonal Hatch Pattern */
+.clario-hatch-pattern {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(226, 232, 240, 0.3),
+    rgba(226, 232, 240, 0.3) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  border-radius: 14px;
+}
+
+[data-theme="dark"] .clario-hatch-pattern {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(30, 41, 59, 0.4),
+    rgba(30, 41, 59, 0.4) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+
 .grid-stats {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
