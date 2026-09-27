@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { DbStatusBadge } from './DbStatusBadge';
 import { 
   Trophy, 
   Search, 
@@ -134,6 +135,9 @@ export const Navbar = () => {
                 Admin
               </button>
             </div>
+
+            {/* Database Live Connectivity Indicator */}
+            <DbStatusBadge />
 
             {/* Dark/Light Theme Toggle */}
             <button 
