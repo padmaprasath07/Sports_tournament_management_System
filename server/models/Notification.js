@@ -6,6 +6,24 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      index: true,
+    },
+    userEmail: {
+      type: String,
+      default: 'all',
+      index: true,
+      lowercase: true,
+      trim: true,
+    },
+    userId: {
+      type: String,
+      default: '',
+    },
+    role: {
+      type: String,
+      default: 'all',
+      enum: ['all', 'participant', 'admin', 'guest'],
+      index: true,
     },
     title: {
       type: String,

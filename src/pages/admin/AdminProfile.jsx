@@ -1,27 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ShieldCheck, Mail, Lock, Server, Save, Activity } from 'lucide-react';
 
 export const AdminProfile = () => {
-  const { addToast } = useApp();
-  const [adminName, setAdminName] = useState('Admin Director');
-  const [email, setEmail] = useState('admin@sportpulse.com');
+  const { userProfile, updateUserProfile, addToast } = useApp();
+  const [adminName, setAdminName] = useState(userProfile?.name || 'Tournament Director');
+  const [email, setEmail] = useState(userProfile?.email || 'admin@sportpulse.com');
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    if (userProfile?.name) setAdminName(userProfile.name);
+    if (userProfile?.email) setEmail(userProfile.email);
+  }, [userProfile]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    addToast('Admin system settings saved!', 'success');
+    if (updateUserProfile) {
+      await updateUserProfile({ name: adminName, email });
+    } else {
+      addToast('Admin system settings saved!', 'success');
+    }
   };
+
+  const initials = adminName
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
       
-      <h1 className="text-2xl font-bold font-outfit">Admin System Profile & Security</h1>
+      <h1 className="text-2xl font-black font-urbanist tracking-tight">Admin System Profile & Security</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         <div className="material-card p-6 text-center space-y-4">
-          <div className="w-20 h-20 rounded-full bg-indigo-600 text-white text-2xl font-extrabold mx-auto flex items-center justify-center shadow-lg">
-            AD
+          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 via-blue-600 to-emerald-500 text-white text-2xl font-black font-urbanist mx-auto flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            {initials || 'AD'}
           </div>
           <div>
             <h2 className="font-bold text-lg font-outfit">{adminName}</h2>

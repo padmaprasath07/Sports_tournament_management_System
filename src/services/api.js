@@ -51,6 +51,37 @@ export const api = {
     });
   },
 
+  // User Accounts & Authentication (Database-backed)
+  async registerUser(userData) {
+    return request('/users/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  async loginUser(credentials) {
+    return request('/users/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+
+  async getUsers(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/users${qs ? `?${qs}` : ''}`);
+  },
+
+  async getUserProfile(emailOrId) {
+    return request(`/users/${encodeURIComponent(emailOrId)}`);
+  },
+
+  async updateUserProfile(id, updates) {
+    return request(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
   // Tournaments CRUD
   async getTournaments(params = {}) {
     const searchParams = new URLSearchParams();
@@ -112,10 +143,11 @@ export const api = {
     });
   },
 
-  async updateRegistrationStatus(id, status) {
+  async updateRegistrationStatus(id, statusData) {
+    const payload = typeof statusData === 'string' ? { status: statusData } : statusData;
     return request(`/registrations/${id}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -125,13 +157,20 @@ export const api = {
     return request(`/leaderboard${qs}`);
   },
 
-  async getNotifications() {
-    return request('/notifications');
+  async getNotifications(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/notifications${qs ? `?${qs}` : ''}`);
   },
 
   async markNotificationRead(id) {
     return request(`/notifications/${id}/read`, {
       method: 'PUT',
+    });
+  },
+
+  async deleteNotification(id) {
+    return request(`/notifications/${id}`, {
+      method: 'DELETE',
     });
   },
 

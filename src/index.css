@@ -74,17 +74,20 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-surface);
   color: var(--text-main);
   line-height: 1.5;
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+h1, h2, h3, h4, h5, h6, .font-outfit, .font-urbanist, .font-display {
+  font-family: 'Urbanist', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text-main);
 }
 
@@ -274,6 +277,29 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Ensure icons inside input fields have plenty of clearance and never overlap text */
+.input-field.pl-9,
+.input-field.pl-10,
+.input-field.pl-11,
+.input-field.pl-12,
+.input-field[class*="pl-9"],
+.input-field[class*="pl-10"],
+.input-field[class*="pl-11"],
+.input-field[class*="pl-12"] {
+  padding-left: 2.75rem !important; /* 44px ensures 14px clear space past 16px icon */
+}
+
+.input-field.pr-9,
+.input-field.pr-10,
+.input-field.pr-11,
+.input-field.pr-12,
+.input-field[class*="pr-9"],
+.input-field[class*="pr-10"],
+.input-field[class*="pr-11"],
+.input-field[class*="pr-12"] {
+  padding-right: 2.75rem !important;
 }
 
 .input-field:focus {

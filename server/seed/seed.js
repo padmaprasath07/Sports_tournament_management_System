@@ -169,10 +169,11 @@ export const SEED_LEADERBOARD = [
 ];
 
 export const SEED_NOTIFICATIONS = [
-  { id: 'n1', title: 'Registration Confirmed', message: 'You are successfully registered for National Premier League T20.', time: '10 minutes ago', unread: true, type: 'success' },
-  { id: 'n2', title: 'Schedule Update', message: 'Champions Football Cup semi-final match time updated to 6:00 PM.', time: '2 hours ago', unread: true, type: 'warning' },
-  { id: 'n3', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' },
-  { id: 'n4', title: 'Payment Receipt', message: 'Payment of $1,500 processed successfully for Cricket T20 entry fee.', time: '2 days ago', unread: false, type: 'success' }
+  { id: 'n1', userEmail: 'ashwin.player@sportpulse.com', role: 'participant', title: 'Registration Confirmed', message: 'You are successfully registered for National Premier League T20. Entry Ticket: SP-CRK-9921', time: '10 minutes ago', unread: true, type: 'success' },
+  { id: 'n2', userEmail: 'all', role: 'all', title: 'Schedule Update', message: 'Champions Football Cup semi-final match time updated to 6:00 PM.', time: '2 hours ago', unread: true, type: 'warning' },
+  { id: 'n3', userEmail: 'all', role: 'all', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' },
+  { id: 'n4', userEmail: 'ashwin.player@sportpulse.com', role: 'participant', title: 'Payment Receipt', message: 'Payment of $1,500 processed successfully for Cricket T20 entry fee.', time: '2 days ago', unread: false, type: 'success' },
+  { id: 'n5', userEmail: 'admin@sportpulse.com', role: 'admin', title: 'Director Overview', message: '4 active tournaments running across campus stadiums today.', time: '3 hours ago', unread: true, type: 'info' }
 ];
 
 export const seedDatabase = async (force = false) => {

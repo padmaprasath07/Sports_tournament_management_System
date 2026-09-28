@@ -112,7 +112,7 @@ export const DbStatusBadge = () => {
               {/* Collections Status */}
               <div className="p-3 rounded-xl bg-surface-elevated border border-theme">
                 <span className="text-xs font-semibold text-muted block mb-2">Live MongoDB Collections:</span>
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-4 gap-2 text-center">
                   <div className="p-2 rounded-lg bg-surface border border-theme">
                     <div className="text-base font-bold font-mono text-primary">
                       {dbStatus?.counts?.tournaments ?? 5}
@@ -130,6 +130,12 @@ export const DbStatusBadge = () => {
                       {dbStatus?.counts?.registrations ?? 4}
                     </div>
                     <div className="text-[10px] text-muted uppercase">Entries</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-surface border border-theme">
+                    <div className="text-base font-bold font-mono text-emerald-500">
+                      {dbStatus?.counts?.users ?? 1}
+                    </div>
+                    <div className="text-[10px] text-muted uppercase">Users</div>
                   </div>
                 </div>
               </div>

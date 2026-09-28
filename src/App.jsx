@@ -89,13 +89,14 @@ const ViewRouter = () => {
 };
 
 const MainContent = () => {
-  const { role } = useApp();
+  const { role, currentView } = useApp();
+  const isAuthPage = currentView === 'login' || currentView === 'register';
 
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-surface text-main">
       <div className="flex flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6 gap-4">
-        {/* Role Sidebar (Hidden for guest) */}
-        {role !== 'guest' && <Sidebar />}
+        {/* Role Sidebar (Hidden for guest or during auth) */}
+        {role !== 'guest' && !isAuthPage && <Sidebar />}
 
         {/* Main View Target */}
         <main className="flex-1 w-full min-w-0 pb-12 transition-all duration-300">

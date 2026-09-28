@@ -1,5 +1,7 @@
 import { Registration } from '../models/Registration.js';
 import { Tournament } from '../models/Tournament.js';
+import { User } from '../models/User.js';
+import { Notification } from '../models/Notification.js';
 
 // GET /api/registrations
 export const getRegistrations = async (req, res) => {
@@ -8,7 +10,7 @@ export const getRegistrations = async (req, res) => {
     const filter = {};
 
     if (tournamentId) filter.tournamentId = tournamentId;
-    if (email) filter.email = email;
+    if (email) filter.email = { $regex: new RegExp(`^${email.trim()}$`, 'i') };
     if (status) filter.status = status;
 
     const registrations = await Registration.find(filter).sort({ createdAt: -1 });
@@ -21,7 +23,18 @@ export const getRegistrations = async (req, res) => {
 // POST /api/registrations
 export const createRegistration = async (req, res) => {
   try {
-    const { tournamentId, participantName, email, phone, team, sport } = req.body;
+    const { 
+      tournamentId, 
+      participantName, 
+      email, 
+      phone, 
+      team, 
+      sport,
+      fee,
+      amount,
+      paymentStatus,
+      date 
+    } = req.body;
 
     const tournament = await Tournament.findOne({ id: tournamentId });
     if (!tournament) {
@@ -32,9 +45,13 @@ export const createRegistration = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Tournament registration is full' });
     }
 
-    const regId = `reg-${Date.now().toString().slice(-4)}`;
-    const sportPrefix = (tournament.sport || 'SPT').substring(0, 3).toUpperCase();
-    const ticketCode = `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const regId = req.body.id || `reg-${Date.now().toString().slice(-4)}`;
+    const sportPrefix = (sport || tournament.sport || 'SPT').substring(0, 3).toUpperCase();
+    const ticketCode = req.body.ticketCode || `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const effectiveFee = fee || `$${tournament.entryFee}`;
+    const effectiveAmount = typeof amount === 'number' ? amount : tournament.entryFee;
+    const effectivePaymentStatus = paymentStatus || (tournament.entryFee > 0 ? 'Paid' : 'Waived');
 
     const newRegistration = new Registration({
       id: regId,
@@ -45,10 +62,11 @@ export const createRegistration = async (req, res) => {
       phone: phone || '',
       team: team || 'Individual',
       sport: sport || tournament.sport,
-      fee: `$${tournament.entryFee}`,
-      amount: tournament.entryFee,
+      date: date || new Date().toISOString().split('T')[0],
+      fee: effectiveFee,
+      amount: effectiveAmount,
       status: 'Approved',
-      paymentStatus: tournament.entryFee > 0 ? 'Paid' : 'Waived',
+      paymentStatus: effectivePaymentStatus,
       ticketCode,
     });
 
@@ -60,8 +78,47 @@ export const createRegistration = async (req, res) => {
       { $inc: { registeredCount: 1 } }
     );
 
+    // If user exists with this email, increment their registeredTournaments stat
+    if (email) {
+      await User.findOneAndUpdate(
+        { email: email.toLowerCase().trim() },
+        { $inc: { 'stats.registeredTournaments': 1 } }
+      ).catch(() => {});
+    }
+
+    // Create individual confirmation notification for the participant in MongoDB
+    try {
+      const notif = new Notification({
+        id: `notif-${Date.now().toString().slice(-4)}`,
+        userEmail: email ? email.toLowerCase().trim() : 'all',
+        role: 'participant',
+        title: 'Registration Confirmed',
+        message: `Registered for "${tournament.name}" (${newRegistration.sport}). Entry Ticket: ${ticketCode}`,
+        time: 'Just now',
+        unread: true,
+        type: 'success',
+      });
+      await notif.save();
+
+      // Create notification for Tournament Admin
+      const adminNotif = new Notification({
+        id: `notif-adm-${Date.now().toString().slice(-4)}`,
+        userEmail: 'admin@sportpulse.com',
+        role: 'admin',
+        title: 'New Participant Registration',
+        message: `${newRegistration.participantName} enrolled in "${tournament.name}" (${newRegistration.team}).`,
+        time: 'Just now',
+        unread: true,
+        type: 'info',
+      });
+      await adminNotif.save();
+    } catch {
+      // Ignored if notification creation fails
+    }
+
     res.status(201).json({ success: true, data: saved });
   } catch (error) {
+    console.error('[Registration Error]', error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
@@ -69,10 +126,14 @@ export const createRegistration = async (req, res) => {
 // PUT /api/registrations/:id/status
 export const updateRegistrationStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, paymentStatus } = req.body;
+    const updates = {};
+    if (status) updates.status = status;
+    if (paymentStatus) updates.paymentStatus = paymentStatus;
+
     const registration = await Registration.findOneAndUpdate(
       { id: req.params.id },
-      { $set: { status } },
+      { $set: updates },
       { new: true }
     );
 

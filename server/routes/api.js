@@ -21,12 +21,22 @@ import {
 import { getLeaderboard } from '../controllers/leaderboardController.js';
 import {
   getNotifications,
+  createNotification,
   markNotificationRead,
+  deleteNotification,
 } from '../controllers/notificationController.js';
+import {
+  registerUser,
+  loginUser,
+  getUsers,
+  getUserProfile,
+  updateUserProfile,
+} from '../controllers/userController.js';
 import { seedDatabase } from '../seed/seed.js';
 import { Tournament } from '../models/Tournament.js';
 import { Fixture } from '../models/Fixture.js';
 import { Registration } from '../models/Registration.js';
+import { User } from '../models/User.js';
 
 const router = express.Router();
 
@@ -36,15 +46,16 @@ router.get('/health', async (req, res) => {
   const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
   const isConnected = dbState === 1;
 
-  let counts = { tournaments: 0, fixtures: 0, registrations: 0 };
+  let counts = { tournaments: 0, fixtures: 0, registrations: 0, users: 0 };
   if (isConnected) {
     try {
-      const [tCount, fCount, rCount] = await Promise.all([
+      const [tCount, fCount, rCount, uCount] = await Promise.all([
         Tournament.countDocuments(),
         Fixture.countDocuments(),
         Registration.countDocuments(),
+        User.countDocuments(),
       ]);
-      counts = { tournaments: tCount, fixtures: fCount, registrations: rCount };
+      counts = { tournaments: tCount, fixtures: fCount, registrations: rCount, users: uCount };
     } catch {
       // Ignored if query fails
     }
@@ -77,6 +88,13 @@ router.post('/seed', async (req, res) => {
   }
 });
 
+// User Authentication & Profiles (Database-backed)
+router.post('/users/register', registerUser);
+router.post('/users/login', loginUser);
+router.get('/users', getUsers);
+router.get('/users/:emailOrId', getUserProfile);
+router.put('/users/:id', updateUserProfile);
+
 // Tournament Routes
 router.route('/tournaments')
   .get(getTournaments)
@@ -101,8 +119,13 @@ router.put('/registrations/:id/status', updateRegistrationStatus);
 
 // Leaderboard & Notifications & Stats
 router.get('/leaderboard', getLeaderboard);
-router.get('/notifications', getNotifications);
+// Notifications
+router.route('/notifications')
+  .get(getNotifications)
+  .post(createNotification);
+
 router.put('/notifications/:id/read', markNotificationRead);
+router.delete('/notifications/:id', deleteNotification);
 router.get('/stats', getAdminStats);
 
 export default router;

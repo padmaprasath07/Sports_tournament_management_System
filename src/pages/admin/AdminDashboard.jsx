@@ -144,11 +144,11 @@ export const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {recentParticipants.map(p => (
+              {recentParticipants.slice(0, 5).map(p => (
                 <tr key={p.id}>
-                  <td className="font-bold">{p.name}</td>
-                  <td className="text-slate-600 dark:text-slate-300">{p.tournament}</td>
-                  <td><span className="badge bg-slate-100 dark:bg-slate-800 text-slate-700">{p.team}</span></td>
+                  <td className="font-bold text-slate-900 dark:text-slate-100">{p.participantName || p.name}</td>
+                  <td className="text-slate-600 dark:text-slate-300">{p.tournamentName || p.tournament}</td>
+                  <td><span className="badge bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{p.team || 'Individual'}</span></td>
                   <td className="text-slate-500">{p.date}</td>
                   <td className="text-center font-bold">${p.amount}</td>
                   <td className="text-center">

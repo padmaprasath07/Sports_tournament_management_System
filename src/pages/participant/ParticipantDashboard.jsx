@@ -34,13 +34,15 @@ export const ParticipantDashboard = () => {
             Welcome back, {userProfile.name}! 👋
           </h1>
           <p className="text-xs text-slate-300">
-            You have 2 upcoming matches scheduled for this week. Keep up the high performance!
+            {userProfile.registrations?.length > 0 
+              ? `You have ${userProfile.registrations.length} tournament passes recorded under this account.` 
+              : 'Welcome to your athlete portal. Explore open championships and register for your first match!'}
           </p>
         </div>
 
         <button 
           onClick={() => setCurrentView('browse-tournaments')}
-          className="btn btn-accent btn-md rounded-2xl flex-shrink-0"
+          className="btn btn-accent btn-md rounded-2xl flex-shrink-0 cursor-pointer"
         >
           <Trophy className="w-4 h-4" /> Explore Events
         </button>
@@ -50,7 +52,7 @@ export const ParticipantDashboard = () => {
       <div className="grid-stats">
         <StatCard 
           title="Registered Events" 
-          value={userProfile.stats.registeredTournaments} 
+          value={userProfile.registrations?.length ?? userProfile.stats.registeredTournaments} 
           icon={Ticket} 
           color="blue"
           trend="up"
@@ -140,22 +142,34 @@ export const ParticipantDashboard = () => {
               </h3>
               <button 
                 onClick={() => setCurrentView('my-registrations')}
-                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                View All ({userProfile.registrations.length}) &rarr;
+                View All ({userProfile.registrations?.length || 0}) &rarr;
               </button>
             </div>
 
             <div className="space-y-3">
-              {userProfile.registrations.map(reg => (
-                <div key={reg.id} className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs hover:border-blue-400 transition-colors">
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-slate-900 dark:text-slate-100">{reg.tournamentName}</p>
-                    <p className="text-[11px] text-slate-500">{reg.sport} • Ticket: <span className="font-mono text-blue-600 font-bold">{reg.ticketCode}</span></p>
-                  </div>
-                  <span className="badge badge-success">{reg.status}</span>
+              {(!userProfile.registrations || userProfile.registrations.length === 0) ? (
+                <div className="text-center py-6 text-xs text-slate-500 space-y-2">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300">No active tournament passes registered yet.</p>
+                  <button 
+                    onClick={() => setCurrentView('browse-tournaments')}
+                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer block mx-auto"
+                  >
+                    Register for your first tournament &rarr;
+                  </button>
                 </div>
-              ))}
+              ) : (
+                userProfile.registrations.slice(0, 3).map(reg => (
+                  <div key={reg.id} className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs hover:border-blue-400 transition-colors">
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-slate-900 dark:text-slate-100">{reg.tournamentName}</p>
+                      <p className="text-[11px] text-slate-500">{reg.sport} • Ticket: <span className="font-mono text-blue-600 font-bold">{reg.ticketCode}</span></p>
+                    </div>
+                    <span className="badge badge-success">{reg.status}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

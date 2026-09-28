@@ -5,20 +5,27 @@ import { useApp } from '../context/AppContext';
 
 // Tournament Registration Modal
 export const RegistrationModal = ({ tournament, onClose }) => {
-  const { registerForTournament } = useApp();
+  const { registerForTournament, userProfile } = useApp();
+  const isGuest = !userProfile?.email || userProfile?.role === 'Guest' || userProfile?.role === 'guest';
   const [formData, setFormData] = useState({
-    participantName: 'Ashwin Kumar',
-    email: 'ashwin.player@sportpulse.com',
-    phone: '+91 98765 43210',
-    teamName: tournament.type === 'Team' ? 'Thunder Squad' : 'N/A',
+    participantName: isGuest ? '' : (userProfile?.name || ''),
+    email: isGuest ? '' : (userProfile?.email || ''),
+    phone: isGuest ? '' : (userProfile?.phone || ''),
+    teamName: tournament.type === 'Team' ? '' : 'Individual',
     paymentMethod: 'Credit Card'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    registerForTournament(tournament.id, formData);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      await registerForTournament(tournament.id, formData);
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

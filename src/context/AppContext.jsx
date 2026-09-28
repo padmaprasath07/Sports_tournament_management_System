@@ -9,6 +9,40 @@ import {
 } from '../data/mockData';
 import { api } from '../services/api';
 
+export const GUEST_PROFILE = {
+  name: 'Guest Explorer',
+  email: '',
+  role: 'Guest',
+  phone: '',
+  location: '',
+  preferredSports: [],
+  bio: 'Exploring campus tournaments and live scoreboards.',
+  stats: { registeredTournaments: 0, upcomingMatches: 0, wins: 0, certificates: 0 },
+  registrations: []
+};
+
+export const ADMIN_PROFILE = {
+  name: 'Admin Director',
+  email: 'admin@sportpulse.com',
+  role: 'admin',
+  phone: '+91 80 2345 6789',
+  location: 'Athletic Department HQ',
+  preferredSports: ['Football', 'Cricket', 'Basketball', 'Badminton'],
+  bio: 'Campus Sports Administrator & Tournament Organizer.',
+  stats: {
+    registeredTournaments: 5,
+    upcomingMatches: 14,
+    wins: 0,
+    certificates: 0
+  },
+  registrations: []
+};
+
+export const PUBLIC_ANNOUNCEMENTS = [
+  { id: 'pub-1', userEmail: 'all', role: 'all', title: 'Schedule Update', message: 'Champions Football Cup semi-final match time updated to 6:00 PM.', time: '2 hours ago', unread: true, type: 'warning' },
+  { id: 'pub-2', userEmail: 'all', role: 'all', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' }
+];
+
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
@@ -17,8 +51,8 @@ export const AppProvider = ({ children }) => {
   const [currentView, setCurrentView] = useState('home');
   const [tournaments, setTournaments] = useState(INITIAL_TOURNAMENTS);
   const [selectedTournamentId, setSelectedTournamentId] = useState('trn-101');
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [userProfile, setUserProfile] = useState(MOCK_PARTICIPANT_PROFILE);
+  const [notifications, setNotifications] = useState(PUBLIC_ANNOUNCEMENTS);
+  const [userProfile, setUserProfile] = useState(GUEST_PROFILE);
   const [adminStats, setAdminStats] = useState(MOCK_ADMIN_STATS);
   const [recentParticipants, setRecentParticipants] = useState(MOCK_RECENT_PARTICIPANTS);
   const [fixtures, setFixtures] = useState(MOCK_FIXTURES);
@@ -32,7 +66,7 @@ export const AppProvider = ({ children }) => {
     engine: 'MongoDB v8.2 + Mongoose',
     host: 'localhost:27017',
     isAtlasCloud: false,
-    counts: { tournaments: 5, fixtures: 1, registrations: 4 }
+    counts: { tournaments: 5, fixtures: 1, registrations: 4, users: 1 }
   });
 
   // Toggle Theme
@@ -57,6 +91,75 @@ export const AppProvider = ({ children }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
+  // Load individual user-specific notifications and registrations
+  const loadUserSpecificData = useCallback(async (email, targetRole) => {
+    try {
+      const activeRole = targetRole || 'guest';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      // 1. Fetch targeted notifications for this specific account
+      const notifRes = await api.getNotifications({
+        email: cleanEmail,
+        role: activeRole,
+      });
+      if (notifRes?.data) {
+        setNotifications(notifRes.data);
+      }
+
+      // 2. Fetch individual registrations for participant
+      if (activeRole === 'participant' && cleanEmail) {
+        const regRes = await api.getRegistrations({ email: cleanEmail });
+        if (regRes?.data) {
+          const userRegs = regRes.data.map(r => ({
+            ...r,
+            name: r.participantName || r.name || 'Student Athlete',
+            participantName: r.participantName || r.name || 'Student Athlete',
+            tournament: r.tournamentName || r.tournament || 'Tournament Event',
+            tournamentName: r.tournamentName || r.tournament || 'Tournament Event',
+            team: r.team || 'Individual',
+            amount: typeof r.amount === 'number' ? r.amount : (r.fee ? parseInt(String(r.fee).replace(/\D/g, '') || 0) : 0),
+            paymentStatus: r.paymentStatus || 'Paid',
+            date: r.date || (r.createdAt ? r.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]),
+          }));
+
+          setUserProfile(prev => ({
+            ...prev,
+            registrations: userRegs,
+            stats: {
+              ...prev.stats,
+              registeredTournaments: userRegs.length,
+            },
+          }));
+        }
+      } else if (activeRole === 'admin') {
+        // Admin supervises all registrations across campus
+        const regRes = await api.getRegistrations();
+        if (regRes?.data) {
+          const allRegs = regRes.data.map(r => ({
+            ...r,
+            name: r.participantName || r.name || 'Student Athlete',
+            participantName: r.participantName || r.name || 'Student Athlete',
+            tournament: r.tournamentName || r.tournament || 'Tournament Event',
+            tournamentName: r.tournamentName || r.tournament || 'Tournament Event',
+            team: r.team || 'Individual',
+            amount: typeof r.amount === 'number' ? r.amount : (r.fee ? parseInt(String(r.fee).replace(/\D/g, '') || 0) : 0),
+            paymentStatus: r.paymentStatus || 'Paid',
+            date: r.date || (r.createdAt ? r.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]),
+          }));
+          setRecentParticipants(allRegs);
+        }
+      } else if (activeRole === 'guest') {
+        // Guest has 0 registrations and only sees public announcements
+        setUserProfile(GUEST_PROFILE);
+      }
+    } catch (err) {
+      console.warn('[User Data Sync Note]', err.message);
+      if (!cleanEmail) {
+        setNotifications(PUBLIC_ANNOUNCEMENTS);
+      }
+    }
+  }, []);
+
   // Check Database & Load live data from MongoDB
   const loadDatabaseData = useCallback(async () => {
     try {
@@ -70,12 +173,11 @@ export const AppProvider = ({ children }) => {
           counts: health.database.counts,
         });
 
-        // Parallel fetch live collections from MongoDB
-        const [trnRes, fixRes, regRes, notifRes, statsRes] = await Promise.allSettled([
+        // Parallel fetch global tournaments, fixtures, all registrations (for admin feed), and stats
+        const [trnRes, fixRes, regRes, statsRes] = await Promise.allSettled([
           api.getTournaments(),
           api.getFixtures(),
           api.getRegistrations(),
-          api.getNotifications(),
           api.getAdminStats(),
         ]);
 
@@ -86,24 +188,51 @@ export const AppProvider = ({ children }) => {
           setFixtures(fixRes.value.data);
         }
         if (regRes.status === 'fulfilled' && regRes.value.data?.length > 0) {
-          setUserProfile(prev => ({
-            ...prev,
-            registrations: regRes.value.data
+          const allRegs = regRes.value.data.map(r => ({
+            ...r,
+            name: r.participantName || r.name || 'Student Athlete',
+            participantName: r.participantName || r.name || 'Student Athlete',
+            tournament: r.tournamentName || r.tournament || 'Tournament Event',
+            tournamentName: r.tournamentName || r.tournament || 'Tournament Event',
+            team: r.team || 'Individual',
+            amount: typeof r.amount === 'number' ? r.amount : (r.fee ? parseInt(String(r.fee).replace(/\D/g, '') || 0) : 0),
+            paymentStatus: r.paymentStatus || 'Paid',
+            date: r.date || (r.createdAt ? r.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]),
           }));
-          setRecentParticipants(regRes.value.data.slice(0, 5));
-        }
-        if (notifRes.status === 'fulfilled' && notifRes.value.data?.length > 0) {
-          setNotifications(notifRes.value.data);
+          setRecentParticipants(allRegs);
         }
         if (statsRes.status === 'fulfilled' && statsRes.value.data) {
           setAdminStats(statsRes.value.data);
+        }
+
+        // Determine current authenticated user session
+        let activeUser = null;
+        try {
+          const stored = localStorage.getItem('sportpulse_user');
+          if (stored) activeUser = JSON.parse(stored);
+        } catch {}
+
+        if (activeUser && activeUser.email) {
+          const userRole = activeUser.role || 'participant';
+          setRoleState(userRole);
+          setUserProfile(prev => ({
+            ...prev,
+            ...activeUser,
+            stats: activeUser.stats || prev.stats,
+          }));
+          await loadUserSpecificData(activeUser.email, userRole);
+        } else {
+          // Default to Guest with clean isolated public view
+          setRoleState('guest');
+          setUserProfile(GUEST_PROFILE);
+          await loadUserSpecificData('', 'guest');
         }
       }
     } catch {
       // Backend not running or in offline demo mode - keep mockData gracefully
       setDbStatus(prev => ({ ...prev, connected: false }));
     }
-  }, []);
+  }, [loadUserSpecificData]);
 
   useEffect(() => {
     loadDatabaseData();
@@ -120,22 +249,113 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Switch User Role with auto navigation
+  // Switch User Role with auto navigation and data reload
   const setRole = (newRole) => {
     setRoleState(newRole);
     if (newRole === 'guest') {
-      setCurrentView('home');
-      addToast('Switched to Guest / Public View', 'info');
+      logout();
     } else if (newRole === 'participant') {
+      let activeUser = null;
+      try {
+        const stored = localStorage.getItem('sportpulse_user');
+        if (stored) activeUser = JSON.parse(stored);
+      } catch {}
+
+      if (activeUser && activeUser.role === 'participant') {
+        setUserProfile(activeUser);
+        loadUserSpecificData(activeUser.email, 'participant');
+      } else {
+        setUserProfile(MOCK_PARTICIPANT_PROFILE);
+        loadUserSpecificData('ashwin.player@sportpulse.com', 'participant');
+      }
       setCurrentView('participant-dashboard');
-      addToast('Switched to Participant Dashboard', 'success');
+      addToast('Switched to Athlete / Participant Portal', 'info');
     } else if (newRole === 'admin') {
+      setUserProfile(ADMIN_PROFILE);
+      loadUserSpecificData('admin@sportpulse.com', 'admin');
       setCurrentView('admin-dashboard');
-      addToast('Switched to Admin Portal', 'success');
+      addToast('Switched to Tournament Admin Console', 'info');
     }
   };
 
-  // Create Tournament Handler - persists to MongoDB
+  // Continue as Guest handler for public access
+  const continueAsGuest = () => {
+    localStorage.removeItem('sportpulse_user');
+    setRoleState('guest');
+    setUserProfile(GUEST_PROFILE);
+    loadUserSpecificData('', 'guest');
+    setCurrentView('browse-tournaments');
+    addToast('Exploring SportPulse tournaments and live brackets as Guest', 'info');
+  };
+
+  // Logout handler
+  const logout = () => {
+    localStorage.removeItem('sportpulse_user');
+    setRoleState('guest');
+    setUserProfile(GUEST_PROFILE);
+    loadUserSpecificData('', 'guest');
+    setCurrentView('home');
+    addToast('Logged out successfully. Switched to public view.', 'info');
+  };
+
+  // Register New User Account in MongoDB
+  const registerUserAccount = async (accountData) => {
+    try {
+      const res = await api.registerUser(accountData);
+      if (res.success && res.data) {
+        const user = res.data;
+        try {
+          localStorage.setItem('sportpulse_user', JSON.stringify(user));
+        } catch {}
+        setUserProfile(prev => ({
+          ...prev,
+          ...user,
+          registrations: [], // brand new user starts with 0 registrations
+          stats: user.stats || { registeredTournaments: 0, upcomingMatches: 0, wins: 0, certificates: 0 },
+        }));
+        setRoleState(user.role);
+        setCurrentView(user.role === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
+        setDbStatus(prev => ({
+          ...prev,
+          counts: { ...prev.counts, users: (prev.counts?.users || 0) + 1 }
+        }));
+        // Load individual notifications and registrations for this new user
+        await loadUserSpecificData(user.email, user.role);
+        return { success: true, data: user };
+      }
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Log into User Account via MongoDB
+  const loginUserAccount = async (credentials) => {
+    try {
+      const res = await api.loginUser(credentials);
+      if (res.success && res.data) {
+        const user = res.data;
+        try {
+          localStorage.setItem('sportpulse_user', JSON.stringify(user));
+        } catch {}
+        setUserProfile(prev => ({
+          ...prev,
+          ...user,
+          stats: user.stats || prev.stats,
+        }));
+        setRoleState(user.role);
+        setCurrentView(user.role === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
+        // Load individual notifications and registrations for this user
+        await loadUserSpecificData(user.email, user.role);
+        return { success: true, data: user };
+      }
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Tournament Creation Handler - persists to MongoDB
   const createTournament = async (newTrnData) => {
     const id = `trn-${Date.now().toString().slice(-4)}`;
     const newTrn = {
@@ -225,6 +445,40 @@ export const AppProvider = ({ children }) => {
 
   // Participant Register for Tournament - creates Registration document in MongoDB
   const registerForTournament = async (trnId, regForm = {}) => {
+    const trn = tournaments.find(t => t.id === trnId);
+    const sportPrefix = (trn?.sport || 'SPT').substring(0, 3).toUpperCase();
+    const participantName = regForm.participantName || regForm.name || userProfile.name || 'Student Athlete';
+    const email = regForm.email || userProfile.email || 'athlete@campus.edu';
+    const phone = regForm.phone || userProfile.phone || '';
+    const team = regForm.teamName || regForm.team || 'Individual';
+    const entryFee = trn ? trn.entryFee : 0;
+    const fee = `$${entryFee}`;
+    const amount = entryFee;
+    const paymentStatus = entryFee > 0 ? (regForm.paymentMethod ? 'Paid' : 'Paid') : 'Waived';
+    const sport = trn ? trn.sport : 'Sports';
+    const regId = `reg-${Date.now().toString().slice(-4)}`;
+    const ticketCode = `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newReg = {
+      id: regId,
+      tournamentId: trnId,
+      tournamentName: trn ? trn.name : 'Registered Event',
+      tournament: trn ? trn.name : 'Registered Event',
+      participantName,
+      name: participantName,
+      email,
+      phone,
+      team,
+      sport,
+      date: trn ? trn.startDate : new Date().toISOString().split('T')[0],
+      fee,
+      amount,
+      status: 'Approved',
+      paymentStatus,
+      ticketCode
+    };
+
+    // Update tournaments registeredCount
     setTournaments(prev => prev.map(t => {
       if (t.id === trnId) {
         return { ...t, registeredCount: Math.min(t.maxParticipants, t.registeredCount + 1) };
@@ -232,30 +486,21 @@ export const AppProvider = ({ children }) => {
       return t;
     }));
 
-    const trn = tournaments.find(t => t.id === trnId);
-    const sportPrefix = (trn?.sport || 'SPT').substring(0, 3).toUpperCase();
-    const newReg = {
-      id: `reg-${Date.now().toString().slice(-4)}`,
-      tournamentId: trnId,
-      tournamentName: trn ? trn.name : 'Registered Event',
-      participantName: regForm.name || userProfile.name,
-      email: regForm.email || userProfile.email,
-      team: regForm.team || 'Individual',
-      sport: trn ? trn.sport : 'Sports',
-      date: trn ? trn.startDate : new Date().toISOString().split('T')[0],
-      fee: `$${trn ? trn.entryFee : 0}`,
-      status: 'Approved',
-      ticketCode: `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`
-    };
+    // Prepend to recent participants for live admin view
+    setRecentParticipants(prev => [newReg, ...prev]);
 
-    setUserProfile(prev => ({
-      ...prev,
-      stats: {
-        ...prev.stats,
-        registeredTournaments: prev.stats.registeredTournaments + 1
-      },
-      registrations: [newReg, ...prev.registrations]
-    }));
+    // Update participant's registered events if this is the active user session
+    const isCurrentAthlete = (userProfile?.email && userProfile.email.toLowerCase().trim() === email.toLowerCase().trim()) || (role === 'participant' && (!userProfile?.email || userProfile.email.includes('ashwin')));
+    if (isCurrentAthlete) {
+      setUserProfile(prev => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          registeredTournaments: (prev.stats?.registeredTournaments || 0) + 1
+        },
+        registrations: [newReg, ...(prev.registrations || [])]
+      }));
+    }
 
     addToast(`Successfully registered for ${trn ? trn.name : 'tournament'}!`, 'success');
 
@@ -266,8 +511,34 @@ export const AppProvider = ({ children }) => {
         ...prev,
         counts: { ...prev.counts, registrations: (prev.counts?.registrations || 0) + 1 }
       }));
+      // Immediately reload account-specific notifications and registrations
+      const reloadEmail = userProfile?.email || email;
+      if (reloadEmail) {
+        await loadUserSpecificData(reloadEmail, role);
+      }
     } catch (err) {
       console.warn('[DB Sync Note]', err.message);
+    }
+  };
+
+  // Mark notification as read
+  const markNotificationRead = async (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+    try {
+      await api.markNotificationRead(id);
+    } catch (err) {
+      console.warn('[Notification Read]', err.message);
+    }
+  };
+
+  // Delete notification
+  const deleteNotification = async (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await api.deleteNotification(id);
+      addToast('Notification dismissed', 'info');
+    } catch (err) {
+      console.warn('[Notification Delete]', err.message);
     }
   };
 
@@ -316,6 +587,65 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Update Profile Data and persist across app and local storage
+  const updateUserProfile = async (updates) => {
+    setUserProfile(prev => {
+      const merged = { ...prev, ...updates };
+      try {
+        localStorage.setItem('sportpulse_user', JSON.stringify(merged));
+      } catch {}
+      return merged;
+    });
+
+    addToast('Profile changes saved successfully!', 'success');
+
+    // Async sync to MongoDB backend if user has an id or email
+    try {
+      if (userProfile?._id || userProfile?.id) {
+        await api.updateUserProfile(userProfile._id || userProfile.id, updates);
+      }
+    } catch (err) {
+      console.warn('[Profile Sync Note]', err.message);
+    }
+  };
+
+  // Auto-generate / re-seed tournament knockout bracket
+  const autoGenerateBracket = (trnId) => {
+    const targetTrnId = trnId || selectedTournamentId || 'trn-102';
+    const teams = [
+      'Thunderbolts FC', 'Blue Panthers', 'Vipers SC', 'Phoenix Warriors',
+      'Spartans United', 'Titan Strikers', 'Red Eagles', 'Apex Predators'
+    ];
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+
+    const newQuarterFinals = [
+      { id: 'm1', team1: shuffled[0], score1: 0, team2: shuffled[1], score2: 0, winner: null, status: 'Upcoming', time: '10:00 AM' },
+      { id: 'm2', team1: shuffled[2], score1: 0, team2: shuffled[3], score2: 0, winner: null, status: 'Upcoming', time: '12:00 PM' },
+      { id: 'm3', team1: shuffled[4], score1: 0, team2: shuffled[5], score2: 0, winner: null, status: 'Upcoming', time: '02:30 PM' },
+      { id: 'm4', team1: shuffled[6], score1: 0, team2: shuffled[7], score2: 0, winner: null, status: 'Upcoming', time: '04:30 PM' }
+    ];
+
+    const newSemiFinals = [
+      { id: 'm5', team1: shuffled[0], score1: 0, team2: shuffled[2], score2: 0, winner: null, status: 'TBD', time: 'Tomorrow' },
+      { id: 'm6', team1: shuffled[4], score1: 0, team2: shuffled[6], score2: 0, winner: null, status: 'TBD', time: 'Tomorrow' }
+    ];
+
+    const newFinal = [
+      { id: 'm7', team1: shuffled[0], score1: 0, team2: shuffled[4], score2: 0, winner: null, status: 'Grand Final', time: 'Sunday 6:00 PM' }
+    ];
+
+    setFixtures(prev => ({
+      ...prev,
+      [targetTrnId]: {
+        quarterFinals: newQuarterFinals,
+        semiFinals: newSemiFinals,
+        final: newFinal
+      }
+    }));
+
+    addToast('Balanced tournament elimination bracket regenerated with seeded teams!', 'success');
+  };
+
   const selectedTournament = tournaments.find(t => t.id === selectedTournamentId) || tournaments[0];
 
   return (
@@ -335,10 +665,19 @@ export const AppProvider = ({ children }) => {
         togglePublishTournament,
         updateTournamentStatus,
         registerForTournament,
+        registerUserAccount,
+        loginUserAccount,
+        continueAsGuest,
+        logout,
         updateMatchScore,
+        updateUserProfile,
+        autoGenerateBracket,
         notifications,
         setNotifications,
+        markNotificationRead,
+        deleteNotification,
         userProfile,
+        setUserProfile,
         adminStats,
         recentParticipants,
         fixtures,

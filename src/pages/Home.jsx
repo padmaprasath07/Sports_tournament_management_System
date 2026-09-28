@@ -21,12 +21,20 @@ import {
 } from 'lucide-react';
 
 export const Home = () => {
-  const { tournaments, setCurrentView, setSelectedSportFilter, setRole } = useApp();
+  const { tournaments, setCurrentView, setSelectedSportFilter, setRole, setSearchQuery } = useApp();
   const [selectedRegTournament, setSelectedRegTournament] = useState(null);
   const [homeSearch, setHomeSearch] = useState('');
 
   const featuredTournaments = tournaments.filter(t => t.featured);
   const upcomingTournaments = tournaments.slice(0, 4);
+
+  const handleHeroSearch = (e) => {
+    if (e) e.preventDefault();
+    if (homeSearch.trim()) {
+      setSearchQuery(homeSearch.trim());
+    }
+    setCurrentView('browse-tournaments');
+  };
 
   const handleCategoryClick = (sportName) => {
     setSelectedSportFilter(sportName);
@@ -47,33 +55,33 @@ export const Home = () => {
             <span>Next-Gen Sports Tournament Ecosystem</span>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight font-outfit leading-tight">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight font-urbanist leading-tight">
             Elevate College & Professional <span className="gradient-text">Sports Tournaments</span>
           </h1>
 
-          <p className="text-sm md:text-base text-slate-300 leading-relaxed">
+          <p className="text-sm md:text-base text-slate-300 leading-relaxed font-sans">
             Register for premier leagues, track live brackets, view real-time scoreboards, and climb global athletic rankings on one seamless platform.
           </p>
 
           {/* Quick Hero Search Input */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <form onSubmit={handleHeroSearch} className="flex flex-col sm:flex-row gap-3 pt-2">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input 
                 type="text" 
-                placeholder="Search Cricket, Football, Tennis..."
+                placeholder="Search Cricket, Football, Tennis, Basketball..."
                 value={homeSearch}
                 onChange={e => setHomeSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 backdrop-blur-md"
               />
             </div>
             <button 
-              onClick={() => setCurrentView('browse-tournaments')}
+              type="submit"
               className="btn btn-primary btn-lg rounded-2xl"
             >
               Explore Tournaments <ArrowRight className="w-4 h-4" />
             </button>
-          </div>
+          </form>
 
           {/* Quick Demo Buttons */}
           <div className="pt-4 flex items-center gap-4 text-xs text-slate-400">

@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Zap, Radio, CheckCircle, Flame, Plus, Minus, Send } from 'lucide-react';
 
 export const LiveScoreConsole = () => {
-  const { addToast } = useApp();
+  const { addToast, updateMatchScore } = useApp();
   const [team1Score, setTeam1Score] = useState(2);
   const [team2Score, setTeam2Score] = useState(1);
   const [matchStatus, setMatchStatus] = useState('78\' Second Half');
@@ -13,6 +13,20 @@ export const LiveScoreConsole = () => {
     { time: "45'", text: "Half-time whistle. Score 1 - 1." }
   ]);
   const [newComment, setNewComment] = useState('');
+
+  const handleBroadcastScore = async () => {
+    if (updateMatchScore) {
+      await updateMatchScore(
+        'trn-102', 
+        'final', 
+        'm7', 
+        team1Score, 
+        team2Score, 
+        team1Score > team2Score ? 'Thunder FC' : (team2Score > team1Score ? 'Blue Panthers' : 'Draw')
+      );
+    }
+    addToast(`Live score ${team1Score} - ${team2Score} synchronized with MongoDB fixtures!`, 'success');
+  };
 
   const handleAddComment = (e) => {
     e.preventDefault();
@@ -28,7 +42,7 @@ export const LiveScoreConsole = () => {
       
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold font-outfit">Live Match Score Console</h1>
+          <h1 className="text-2xl font-black font-urbanist tracking-tight">Live Match Score Console</h1>
           <p className="text-xs text-slate-500">Update scores in real-time and stream commentary logs to spectators.</p>
         </div>
 
@@ -38,10 +52,10 @@ export const LiveScoreConsole = () => {
       </div>
 
       {/* Live Match Scorecard Control Box */}
-      <div className="material-card p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-none rounded-3xl space-y-6">
+      <div className="material-card p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-none rounded-3xl space-y-6 shadow-xl">
         
         <div className="flex justify-between items-center text-xs">
-          <span className="badge bg-blue-500/20 text-blue-300">Champions Football Cup 2026 • Final</span>
+          <span className="badge bg-blue-500/20 text-blue-300 font-bold">Champions Football Cup 2026 • Final</span>
           <span className="font-bold text-amber-400 font-mono">{matchStatus}</span>
         </div>
 
@@ -49,27 +63,33 @@ export const LiveScoreConsole = () => {
         <div className="grid grid-cols-3 gap-6 items-center text-center">
           
           <div className="space-y-3">
-            <span className="font-bold text-lg font-outfit text-white block">Thunder FC</span>
-            <div className="text-5xl font-extrabold font-outfit text-blue-400">{team1Score}</div>
+            <span className="font-bold text-lg font-urbanist text-white block">Thunder FC</span>
+            <div className="text-5xl font-black font-urbanist text-blue-400">{team1Score}</div>
             <div className="flex justify-center gap-2">
-              <button onClick={() => setTeam1Score(prev => Math.max(0, prev - 1))} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold">-1</button>
-              <button onClick={() => setTeam1Score(prev => prev + 1)} className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold px-4">+1 Score</button>
+              <button onClick={() => setTeam1Score(prev => Math.max(0, prev - 1))} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold cursor-pointer">-1</button>
+              <button onClick={() => setTeam1Score(prev => prev + 1)} className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold px-4 cursor-pointer">+1 Score</button>
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-2">
             <div className="w-12 h-12 rounded-full bg-white/10 mx-auto flex items-center justify-center font-extrabold text-sm text-slate-300">
               VS
             </div>
             <span className="text-[10px] text-slate-400 block font-semibold">Green Valley Arena</span>
+            <button 
+              onClick={handleBroadcastScore}
+              className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-md cursor-pointer transition-all flex items-center justify-center gap-1 mx-auto"
+            >
+              <Zap className="w-3.5 h-3.5" /> Sync Scoreboard
+            </button>
           </div>
 
           <div className="space-y-3">
-            <span className="font-bold text-lg font-outfit text-white block">Blue Panthers</span>
-            <div className="text-5xl font-extrabold font-outfit text-emerald-400">{team2Score}</div>
+            <span className="font-bold text-lg font-urbanist text-white block">Blue Panthers</span>
+            <div className="text-5xl font-black font-urbanist text-emerald-400">{team2Score}</div>
             <div className="flex justify-center gap-2">
-              <button onClick={() => setTeam2Score(prev => Math.max(0, prev - 1))} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold">-1</button>
-              <button onClick={() => setTeam2Score(prev => prev + 1)} className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold px-4">+1 Score</button>
+              <button onClick={() => setTeam2Score(prev => Math.max(0, prev - 1))} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold cursor-pointer">-1</button>
+              <button onClick={() => setTeam2Score(prev => prev + 1)} className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold px-4 cursor-pointer">+1 Score</button>
             </div>
           </div>
 

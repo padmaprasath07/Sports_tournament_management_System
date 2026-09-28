@@ -1,32 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, Mail, Phone, MapPin, Award, CheckCircle2, Save } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Award, CheckCircle2, Save, Trophy, Activity } from 'lucide-react';
 
 export const UserProfile = () => {
-  const { userProfile, addToast } = useApp();
+  const { userProfile, updateUserProfile, addToast } = useApp();
   const [profile, setProfile] = useState(userProfile);
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    setProfile(userProfile);
+  }, [userProfile]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    addToast('Profile changes saved successfully!', 'success');
+    if (updateUserProfile) {
+      await updateUserProfile(profile);
+    } else {
+      addToast('Profile changes saved successfully!', 'success');
+    }
   };
+
+  const initials = (profile.name || 'Student Athlete')
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
       
-      <h1 className="text-2xl font-bold font-outfit">My Athlete Profile</h1>
+      <h1 className="text-2xl font-black font-urbanist tracking-tight">My Athlete Profile</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Left: Profile Info Card */}
         <div className="material-card p-6 text-center space-y-4">
-          <div className="w-20 h-20 rounded-full gradient-primary text-white text-2xl font-extrabold mx-auto flex items-center justify-center shadow-lg">
-            AK
+          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 text-white text-2xl font-black font-urbanist mx-auto flex items-center justify-center shadow-lg shadow-blue-500/20">
+            {initials || 'SP'}
           </div>
 
           <div>
-            <h2 className="font-bold text-lg font-outfit">{profile.name}</h2>
-            <p className="text-xs text-slate-500">{profile.role} • Athlete ID: SP-9912</p>
+            <h2 className="font-black text-lg font-urbanist">{profile.name}</h2>
+            <p className="text-xs text-slate-500">{profile.role || 'Athlete'} • Member ID: SP-9912</p>
           </div>
 
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs space-y-2 text-left text-slate-600 dark:text-slate-400">

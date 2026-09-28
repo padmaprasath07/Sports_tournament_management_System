@@ -6,12 +6,12 @@ import { LiveScoreModal } from '../../components/Modals';
 import { GitBranch, RefreshCw, Trophy, Table } from 'lucide-react';
 
 export const FixtureManagement = () => {
-  const { selectedTournament, setSelectedTournamentId, tournaments, addToast } = useApp();
+  const { selectedTournament, setSelectedTournamentId, tournaments, autoGenerateBracket } = useApp();
   const [activeFormat, setActiveFormat] = useState('knockout'); // 'knockout' | 'points'
   const [selectedMatch, setSelectedMatch] = useState(null);
 
   const handleAutoGenerate = () => {
-    addToast('Auto-generated balanced tournament brackets & schedules!', 'success');
+    autoGenerateBracket(selectedTournament?.id);
   };
 
   return (
