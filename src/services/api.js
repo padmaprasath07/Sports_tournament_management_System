@@ -1,10 +1,26 @@
 // SportPulse API Service - Connects React Frontend to Express & MongoDB Backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const resolveApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // When running in a secure HTTPS production environment (e.g. Vercel deployment),
+  // do NOT attempt mixed-content HTTP requests to localhost:5000 which browsers reject immediately.
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return null;
+  }
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Helper to make HTTP requests with timeout
  */
 async function request(endpoint, options = {}) {
+  if (!API_BASE_URL) {
+    throw new Error('CloudBackendUnreachable: HTTPS frontend running without configured cloud backend.');
+  }
+
   const url = `${API_BASE_URL}${endpoint}`;
   const config = {
     headers: {
@@ -32,7 +48,9 @@ async function request(endpoint, options = {}) {
     return await response.json();
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`[API Error: ${endpoint}]`, err.message);
+    if (err.name !== 'AbortError') {
+      console.info(`[SportPulse API Sync Note: ${endpoint}]`, err.message);
+    }
     throw err;
   }
 }

@@ -101,7 +101,10 @@ export const Register = () => {
       }
     } catch (err) {
       console.error('[Registration Error]', err);
-      const errMsg = err.message || 'Failed to create account. Please try again.';
+      let errMsg = err.message || 'Failed to create account. Please try again.';
+      if (errMsg.toLowerCase().includes('failed to fetch') || errMsg.toLowerCase().includes('network') || errMsg.toLowerCase().includes('cloudbackend')) {
+        errMsg = 'Unable to reach backend database. Please try again or check your network.';
+      }
       setFormError(errMsg);
       addToast(errMsg, 'error');
     } finally {

@@ -43,6 +43,55 @@ export const PUBLIC_ANNOUNCEMENTS = [
   { id: 'pub-2', userEmail: 'all', role: 'all', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' }
 ];
 
+// Default demo accounts with preconfigured credentials
+export const DEFAULT_ACCOUNTS = [
+  {
+    id: 'usr-ashwin',
+    name: 'Ashwin Kumar',
+    email: 'ashwin.player@sportpulse.com',
+    password: 'password123',
+    role: 'participant',
+    phone: '+91 98765 43210',
+    location: 'Bangalore, Karnataka',
+    preferredSports: ['Football', 'Cricket', 'Badminton'],
+    bio: 'Varsity Striker & Athletics Team Captain. 3x Inter-College Gold Medalist.',
+    stats: { registeredTournaments: 3, upcomingMatches: 2, wins: 12, certificates: 3 },
+    registrations: MOCK_PARTICIPANT_PROFILE.registrations
+  },
+  {
+    id: 'usr-admin',
+    name: 'Coach Vikram Rathore',
+    email: 'admin@sportpulse.com',
+    password: 'password123',
+    role: 'admin',
+    phone: '+91 80 2345 6789',
+    location: 'Athletic Department HQ',
+    preferredSports: ['Football', 'Cricket', 'Basketball', 'Badminton'],
+    bio: 'Campus Sports Administrator & Tournament Organizer.',
+    stats: { registeredTournaments: 5, upcomingMatches: 14, wins: 0, certificates: 0 },
+    registrations: []
+  }
+];
+
+export const getStoredUsers = () => {
+  try {
+    const raw = localStorage.getItem('sportpulse_registered_users');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return DEFAULT_ACCOUNTS;
+};
+
+export const saveStoredUsers = (users) => {
+  try {
+    localStorage.setItem('sportpulse_registered_users', JSON.stringify(users));
+  } catch {}
+};
+
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
@@ -93,11 +142,11 @@ export const AppProvider = ({ children }) => {
 
   // Load individual user-specific notifications and registrations
   const loadUserSpecificData = useCallback(async (email, targetRole) => {
-    try {
-      const activeRole = targetRole || 'guest';
-      const cleanEmail = email ? email.toLowerCase().trim() : '';
+    const activeRole = targetRole || 'guest';
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
 
-      // 1. Fetch targeted notifications for this specific account
+    // 1. Fetch targeted notifications for this specific account
+    try {
       const notifRes = await api.getNotifications({
         email: cleanEmail,
         role: activeRole,
@@ -105,9 +154,44 @@ export const AppProvider = ({ children }) => {
       if (notifRes?.data) {
         setNotifications(notifRes.data);
       }
+    } catch {
+      // Offline / client-mode notification fallback
+      if (!cleanEmail || activeRole === 'guest') {
+        setNotifications(PUBLIC_ANNOUNCEMENTS);
+      } else if (cleanEmail.includes('ashwin')) {
+        setNotifications(MOCK_NOTIFICATIONS);
+      } else if (cleanEmail.includes('admin') || activeRole === 'admin') {
+        setNotifications([
+          { id: 'notif-adm-1', title: 'System Overview', message: 'All campus tournament fixtures are synchronized.', time: '1 hour ago', unread: true, type: 'info' },
+          ...PUBLIC_ANNOUNCEMENTS
+        ]);
+      } else {
+        try {
+          const userNotifsRaw = localStorage.getItem(`sportpulse_notifs_${cleanEmail}`);
+          if (userNotifsRaw) {
+            setNotifications(JSON.parse(userNotifsRaw));
+          } else {
+            setNotifications([
+              {
+                id: `notif-welcome-${Date.now()}`,
+                title: 'Welcome to SportPulse!',
+                message: 'Your athlete account is ready. Browse upcoming tournaments and register for your first match.',
+                time: 'Just now',
+                type: 'success',
+                unread: true
+              },
+              ...PUBLIC_ANNOUNCEMENTS
+            ]);
+          }
+        } catch {
+          setNotifications(PUBLIC_ANNOUNCEMENTS);
+        }
+      }
+    }
 
-      // 2. Fetch individual registrations for participant
-      if (activeRole === 'participant' && cleanEmail) {
+    // 2. Fetch individual registrations for participant or admin
+    if (activeRole === 'participant' && cleanEmail) {
+      try {
         const regRes = await api.getRegistrations({ email: cleanEmail });
         if (regRes?.data) {
           const userRegs = regRes.data.map(r => ({
@@ -131,8 +215,28 @@ export const AppProvider = ({ children }) => {
             },
           }));
         }
-      } else if (activeRole === 'admin') {
-        // Admin supervises all registrations across campus
+      } catch {
+        // Offline / client fallback for registrations
+        if (cleanEmail.includes('ashwin')) {
+          setUserProfile(prev => ({
+            ...prev,
+            registrations: MOCK_PARTICIPANT_PROFILE.registrations,
+            stats: { ...prev.stats, registeredTournaments: MOCK_PARTICIPANT_PROFILE.registrations.length }
+          }));
+        } else {
+          try {
+            const rawRegs = localStorage.getItem(`sportpulse_user_regs_${cleanEmail}`);
+            const localRegs = rawRegs ? JSON.parse(rawRegs) : [];
+            setUserProfile(prev => ({
+              ...prev,
+              registrations: localRegs,
+              stats: { ...prev.stats, registeredTournaments: localRegs.length }
+            }));
+          } catch {}
+        }
+      }
+    } else if (activeRole === 'admin') {
+      try {
         const regRes = await api.getRegistrations();
         if (regRes?.data) {
           const allRegs = regRes.data.map(r => ({
@@ -148,15 +252,9 @@ export const AppProvider = ({ children }) => {
           }));
           setRecentParticipants(allRegs);
         }
-      } else if (activeRole === 'guest') {
-        // Guest has 0 registrations and only sees public announcements
-        setUserProfile(GUEST_PROFILE);
-      }
-    } catch (err) {
-      console.warn('[User Data Sync Note]', err.message);
-      if (!cleanEmail) {
-        setNotifications(PUBLIC_ANNOUNCEMENTS);
-      }
+      } catch {}
+    } else if (activeRole === 'guest') {
+      setUserProfile(GUEST_PROFILE);
     }
   }, []);
 
@@ -204,33 +302,33 @@ export const AppProvider = ({ children }) => {
         if (statsRes.status === 'fulfilled' && statsRes.value.data) {
           setAdminStats(statsRes.value.data);
         }
-
-        // Determine current authenticated user session
-        let activeUser = null;
-        try {
-          const stored = localStorage.getItem('sportpulse_user');
-          if (stored) activeUser = JSON.parse(stored);
-        } catch {}
-
-        if (activeUser && activeUser.email) {
-          const userRole = activeUser.role || 'participant';
-          setRoleState(userRole);
-          setUserProfile(prev => ({
-            ...prev,
-            ...activeUser,
-            stats: activeUser.stats || prev.stats,
-          }));
-          await loadUserSpecificData(activeUser.email, userRole);
-        } else {
-          // Default to Guest with clean isolated public view
-          setRoleState('guest');
-          setUserProfile(GUEST_PROFILE);
-          await loadUserSpecificData('', 'guest');
-        }
       }
     } catch {
       // Backend not running or in offline demo mode - keep mockData gracefully
       setDbStatus(prev => ({ ...prev, connected: false }));
+    }
+
+    // Determine current authenticated user session (works seamlessly in both online & offline modes)
+    let activeUser = null;
+    try {
+      const stored = localStorage.getItem('sportpulse_user');
+      if (stored) activeUser = JSON.parse(stored);
+    } catch {}
+
+    if (activeUser && activeUser.email) {
+      const userRole = activeUser.role || 'participant';
+      setRoleState(userRole);
+      setUserProfile(prev => ({
+        ...prev,
+        ...activeUser,
+        stats: activeUser.stats || prev.stats,
+      }));
+      await loadUserSpecificData(activeUser.email, userRole);
+    } else {
+      // Default to Guest with clean isolated public view
+      setRoleState('guest');
+      setUserProfile(GUEST_PROFILE);
+      await loadUserSpecificData('', 'guest');
     }
   }, [loadUserSpecificData]);
 
@@ -265,14 +363,16 @@ export const AppProvider = ({ children }) => {
         setUserProfile(activeUser);
         loadUserSpecificData(activeUser.email, 'participant');
       } else {
-        setUserProfile(MOCK_PARTICIPANT_PROFILE);
-        loadUserSpecificData('ashwin.player@sportpulse.com', 'participant');
+        const defaultAthlete = DEFAULT_ACCOUNTS[0];
+        setUserProfile(defaultAthlete);
+        loadUserSpecificData(defaultAthlete.email, 'participant');
       }
       setCurrentView('participant-dashboard');
       addToast('Switched to Athlete / Participant Portal', 'info');
     } else if (newRole === 'admin') {
-      setUserProfile(ADMIN_PROFILE);
-      loadUserSpecificData('admin@sportpulse.com', 'admin');
+      const defaultAdmin = DEFAULT_ACCOUNTS[1];
+      setUserProfile(defaultAdmin);
+      loadUserSpecificData(defaultAdmin.email, 'admin');
       setCurrentView('admin-dashboard');
       addToast('Switched to Tournament Admin Console', 'info');
     }
@@ -298,61 +398,143 @@ export const AppProvider = ({ children }) => {
     addToast('Logged out successfully. Switched to public view.', 'info');
   };
 
-  // Register New User Account in MongoDB
+  // Register New User Account in MongoDB / Hybrid Local Storage
   const registerUserAccount = async (accountData) => {
-    try {
-      const res = await api.registerUser(accountData);
-      if (res.success && res.data) {
-        const user = res.data;
-        try {
-          localStorage.setItem('sportpulse_user', JSON.stringify(user));
-        } catch {}
-        setUserProfile(prev => ({
-          ...prev,
-          ...user,
-          registrations: [], // brand new user starts with 0 registrations
-          stats: user.stats || { registeredTournaments: 0, upcomingMatches: 0, wins: 0, certificates: 0 },
-        }));
-        setRoleState(user.role);
-        setCurrentView(user.role === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
-        setDbStatus(prev => ({
-          ...prev,
-          counts: { ...prev.counts, users: (prev.counts?.users || 0) + 1 }
-        }));
-        // Load individual notifications and registrations for this new user
-        await loadUserSpecificData(user.email, user.role);
-        return { success: true, data: user };
-      }
-      return res;
-    } catch (err) {
-      throw err;
+    const cleanEmail = accountData.email ? accountData.email.toLowerCase().trim() : '';
+    const cleanRole = accountData.role || 'participant';
+
+    if (!cleanEmail) {
+      throw new Error('Please enter a valid email address.');
     }
+
+    // Check if account already exists locally or in demo registry
+    const currentUsers = getStoredUsers();
+    const existing = currentUsers.find(u => u.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      throw new Error(`An account with email "${cleanEmail}" already exists. Please log in.`);
+    }
+
+    const newUser = {
+      id: `usr-${Date.now().toString().slice(-6)}`,
+      name: (accountData.name || 'Student Athlete').trim(),
+      email: cleanEmail,
+      password: accountData.password,
+      role: cleanRole,
+      phone: accountData.phone || '',
+      preferredSports: accountData.preferredSports || [accountData.preferredSport || 'Football'],
+      location: accountData.location || 'Campus Main Arena',
+      bio: accountData.bio || (cleanRole === 'admin' ? 'Campus Tournament Administrator' : 'Active Student Athlete'),
+      stats: { registeredTournaments: 0, upcomingMatches: 0, wins: 0, certificates: 0 },
+      registrations: [],
+      createdAt: new Date().toISOString()
+    };
+
+    // Save locally
+    const updatedUsers = [newUser, ...currentUsers];
+    saveStoredUsers(updatedUsers);
+
+    try {
+      localStorage.setItem('sportpulse_user', JSON.stringify(newUser));
+    } catch {}
+
+    // Update active UI state immediately
+    setUserProfile(newUser);
+    setRoleState(cleanRole);
+    setCurrentView(cleanRole === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
+
+    setDbStatus(prev => ({
+      ...prev,
+      counts: { ...prev.counts, users: (prev.counts?.users || 0) + 1 }
+    }));
+
+    // Welcome notifications
+    const welcomeNotif = {
+      id: `notif-welcome-${Date.now()}`,
+      userEmail: cleanEmail,
+      title: `Welcome, ${newUser.name}!`,
+      message: 'Your account is ready. Browse upcoming championships and register for your first match.',
+      time: 'Just now',
+      type: 'success',
+      unread: true
+    };
+    setNotifications([welcomeNotif, ...PUBLIC_ANNOUNCEMENTS]);
+    try {
+      localStorage.setItem(`sportpulse_notifs_${cleanEmail}`, JSON.stringify([welcomeNotif, ...PUBLIC_ANNOUNCEMENTS]));
+    } catch {}
+
+    // Asynchronously sync with MongoDB if server is active (won't block user if offline/mixed content)
+    try {
+      await api.registerUser(accountData);
+    } catch (apiErr) {
+      console.info('[SportPulse Notice] Offline/Client Mode: Account saved locally.', apiErr.message);
+    }
+
+    return { success: true, data: newUser };
   };
 
-  // Log into User Account via MongoDB
+  // Log into User Account via MongoDB / Hybrid Local Storage
   const loginUserAccount = async (credentials) => {
+    const cleanEmail = credentials.email ? credentials.email.toLowerCase().trim() : '';
+    const cleanPassword = credentials.password || '';
+
+    if (!cleanEmail) {
+      throw new Error('Please enter your email address.');
+    }
+
+    // 1. Try remote MongoDB login if API is reachable
+    let remoteUser = null;
     try {
       const res = await api.loginUser(credentials);
       if (res.success && res.data) {
-        const user = res.data;
-        try {
-          localStorage.setItem('sportpulse_user', JSON.stringify(user));
-        } catch {}
-        setUserProfile(prev => ({
-          ...prev,
-          ...user,
-          stats: user.stats || prev.stats,
-        }));
-        setRoleState(user.role);
-        setCurrentView(user.role === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
-        // Load individual notifications and registrations for this user
-        await loadUserSpecificData(user.email, user.role);
-        return { success: true, data: user };
+        remoteUser = res.data;
       }
-      return res;
-    } catch (err) {
-      throw err;
+    } catch (apiErr) {
+      console.info('[SportPulse Login Note] Remote API offline or blocked, checking local account registry...', apiErr.message);
     }
+
+    if (remoteUser) {
+      try {
+        localStorage.setItem('sportpulse_user', JSON.stringify(remoteUser));
+      } catch {}
+      setUserProfile(prev => ({
+        ...prev,
+        ...remoteUser,
+        stats: remoteUser.stats || prev.stats,
+      }));
+      setRoleState(remoteUser.role);
+      setCurrentView(remoteUser.role === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
+      await loadUserSpecificData(remoteUser.email, remoteUser.role);
+      return { success: true, data: remoteUser };
+    }
+
+    // 2. Fallback: Authenticate against local and demo account registry
+    const currentUsers = getStoredUsers();
+    const matchedUser = currentUsers.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (!matchedUser) {
+      throw new Error(`No account found with email "${cleanEmail}". Please check your email or click "Register" to create a new account.`);
+    }
+
+    if (matchedUser.password && matchedUser.password !== cleanPassword) {
+      throw new Error('Incorrect password. Please verify your credentials and try again.');
+    }
+
+    // Successful local login
+    try {
+      localStorage.setItem('sportpulse_user', JSON.stringify(matchedUser));
+    } catch {}
+
+    setUserProfile(prev => ({
+      ...prev,
+      ...matchedUser,
+      stats: matchedUser.stats || prev.stats,
+      registrations: matchedUser.registrations || prev.registrations || []
+    }));
+    setRoleState(matchedUser.role);
+    setCurrentView(matchedUser.role === 'admin' ? 'admin-dashboard' : 'participant-dashboard');
+    await loadUserSpecificData(matchedUser.email, matchedUser.role);
+
+    return { success: true, data: matchedUser };
   };
 
   // Tournament Creation Handler - persists to MongoDB
@@ -492,15 +674,54 @@ export const AppProvider = ({ children }) => {
     // Update participant's registered events if this is the active user session
     const isCurrentAthlete = (userProfile?.email && userProfile.email.toLowerCase().trim() === email.toLowerCase().trim()) || (role === 'participant' && (!userProfile?.email || userProfile.email.includes('ashwin')));
     if (isCurrentAthlete) {
-      setUserProfile(prev => ({
-        ...prev,
-        stats: {
-          ...prev.stats,
-          registeredTournaments: (prev.stats?.registeredTournaments || 0) + 1
-        },
-        registrations: [newReg, ...(prev.registrations || [])]
-      }));
+      setUserProfile(prev => {
+        const updatedRegs = [newReg, ...(prev.registrations || [])];
+        const updatedProfile = {
+          ...prev,
+          stats: {
+            ...prev.stats,
+            registeredTournaments: updatedRegs.length
+          },
+          registrations: updatedRegs
+        };
+
+        try {
+          const cleanEmail = (prev.email || email).toLowerCase().trim();
+          localStorage.setItem(`sportpulse_user_regs_${cleanEmail}`, JSON.stringify(updatedRegs));
+          localStorage.setItem('sportpulse_user', JSON.stringify(updatedProfile));
+          
+          const raw = localStorage.getItem('sportpulse_registered_users');
+          if (raw) {
+            const users = JSON.parse(raw);
+            const idx = users.findIndex(u => u.email.toLowerCase() === cleanEmail);
+            if (idx !== -1) {
+              users[idx] = { ...users[idx], ...updatedProfile };
+              localStorage.setItem('sportpulse_registered_users', JSON.stringify(users));
+            }
+          }
+        } catch {}
+
+        return updatedProfile;
+      });
     }
+
+    // Add confirmed registration notification for this participant
+    try {
+      const targetEmail = (userProfile?.email || email).toLowerCase().trim();
+      const newNotif = {
+        id: `notif-reg-${Date.now()}`,
+        userEmail: targetEmail,
+        title: 'Registration Confirmed',
+        message: `You are officially registered for ${trn ? trn.name : 'the championship'}. Pass: ${ticketCode}`,
+        time: 'Just now',
+        type: 'success',
+        unread: true
+      };
+      setNotifications(prev => [newNotif, ...prev]);
+      const stored = localStorage.getItem(`sportpulse_notifs_${targetEmail}`);
+      const notifsList = stored ? JSON.parse(stored) : [];
+      localStorage.setItem(`sportpulse_notifs_${targetEmail}`, JSON.stringify([newNotif, ...notifsList]));
+    } catch {}
 
     addToast(`Successfully registered for ${trn ? trn.name : 'tournament'}!`, 'success');
 
@@ -511,13 +732,13 @@ export const AppProvider = ({ children }) => {
         ...prev,
         counts: { ...prev.counts, registrations: (prev.counts?.registrations || 0) + 1 }
       }));
-      // Immediately reload account-specific notifications and registrations
+      // Immediately reload account-specific notifications and registrations if online
       const reloadEmail = userProfile?.email || email;
       if (reloadEmail) {
         await loadUserSpecificData(reloadEmail, role);
       }
     } catch (err) {
-      console.warn('[DB Sync Note]', err.message);
+      console.warn('[DB Sync Note] Saved to local session:', err.message);
     }
   };
 

@@ -97,7 +97,10 @@ export const Login = () => {
       }
     } catch (err) {
       console.warn('[Login Error]', err);
-      const errMsg = err.message || 'Authentication failed. Please verify your email and password.';
+      let errMsg = err.message || 'Authentication failed. Please verify your email and password.';
+      if (errMsg.toLowerCase().includes('failed to fetch') || errMsg.toLowerCase().includes('network') || errMsg.toLowerCase().includes('cloudbackend')) {
+        errMsg = 'Unable to reach authentication server. If using demo credentials, click "Fill Demo" and sign in.';
+      }
       setLoginError(errMsg);
       addToast(errMsg, 'error');
     } finally {
