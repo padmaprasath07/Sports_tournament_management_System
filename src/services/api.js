@@ -4,9 +4,9 @@ const resolveApiBaseUrl = () => {
     return import.meta.env.VITE_API_BASE_URL;
   }
   // When running in a secure HTTPS production environment (e.g. Vercel deployment),
-  // do NOT attempt mixed-content HTTP requests to localhost:5000 which browsers reject immediately.
+  // route seamlessly to the same-origin Vercel serverless /api gateway!
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return null;
+    return '/api';
   }
   return 'http://localhost:5000/api';
 };
