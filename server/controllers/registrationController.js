@@ -58,11 +58,22 @@ export const createRegistration = async (req, res) => {
       await Tournament.updateOne({ _id: tournament._id }, { $set: { maxParticipants: tournament.maxParticipants } });
     }
 
-    const regId = req.body.id || `reg-${Date.now().toString().slice(-4)}`;
+    const baseId = req.body.id || `reg-${Date.now()}`;
+    let regId = baseId;
+    const existingWithId = await Registration.findOne({ id: regId });
+    if (existingWithId) {
+      regId = `reg-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
     const effectiveTournamentName = tournament ? tournament.name : (req.body.tournamentName || req.body.tournament || 'Campus Sports Championship');
     const effectiveSport = sport || (tournament ? tournament.sport : 'Sports');
     const sportPrefix = effectiveSport.substring(0, 3).toUpperCase();
-    const ticketCode = req.body.ticketCode || `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    let ticketCode = req.body.ticketCode || `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const existingWithTicket = await Registration.findOne({ ticketCode });
+    if (existingWithTicket) {
+      ticketCode = `SP-${sportPrefix}-${Date.now().toString().slice(-4)}-${Math.floor(100 + Math.random() * 900)}`;
+    }
 
     const effectiveFee = fee || (tournament ? `$${tournament.entryFee}` : '$0');
     const effectiveAmount = typeof amount === 'number' ? amount : (tournament ? tournament.entryFee : 0);

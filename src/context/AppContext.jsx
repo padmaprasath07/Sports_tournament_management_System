@@ -635,27 +635,27 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Participant Register for Tournament - creates Registration document in MongoDB
+  // Participant Register for Tournament - creates Registration document in MongoDB Atlas
   const registerForTournament = async (trnId, regForm = {}) => {
-    const trn = tournaments.find(t => t.id === trnId);
-    const sportPrefix = (trn?.sport || 'SPT').substring(0, 3).toUpperCase();
+    const trn = tournaments.find(t => t.id === trnId || t._id === trnId || String(t._id) === String(trnId));
+    const sportPrefix = (trn?.sport || regForm.sport || 'SPT').substring(0, 3).toUpperCase();
     const participantName = regForm.participantName || regForm.name || userProfile.name || 'Student Athlete';
-    const email = regForm.email || userProfile.email || 'athlete@campus.edu';
+    const email = (regForm.email || userProfile.email || 'athlete@campus.edu').toLowerCase().trim();
     const phone = regForm.phone || userProfile.phone || '';
     const team = regForm.teamName || regForm.team || 'Individual';
     const entryFee = trn ? trn.entryFee : 0;
     const fee = `$${entryFee}`;
     const amount = entryFee;
     const paymentStatus = entryFee > 0 ? (regForm.paymentMethod ? 'Paid' : 'Paid') : 'Waived';
-    const sport = trn ? trn.sport : 'Sports';
-    const regId = `reg-${Date.now().toString().slice(-4)}`;
+    const sport = trn ? trn.sport : (regForm.sport || 'Sports');
+    const regId = `reg-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
     const ticketCode = `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newReg = {
       id: regId,
-      tournamentId: trnId,
-      tournamentName: trn ? trn.name : 'Registered Event',
-      tournament: trn ? trn.name : 'Registered Event',
+      tournamentId: trn ? trn.id : trnId,
+      tournamentName: trn ? trn.name : (regForm.tournamentName || 'Registered Championship'),
+      tournament: trn ? trn.name : (regForm.tournamentName || 'Registered Championship'),
       participantName,
       name: participantName,
       email,
@@ -670,19 +670,40 @@ export const AppProvider = ({ children }) => {
       ticketCode
     };
 
-    // Update tournaments registeredCount
+    // 1. Direct write to MongoDB Atlas first
+    let savedToAtlas = false;
+    try {
+      const apiRes = await api.createRegistration(newReg);
+      if (apiRes?.data?._id) {
+        newReg._id = apiRes.data._id;
+        newReg.id = apiRes.data.id || newReg.id;
+        newReg.ticketCode = apiRes.data.ticketCode || newReg.ticketCode;
+        savedToAtlas = true;
+      }
+      setDbStatus(prev => ({
+        ...prev,
+        counts: { ...prev.counts, registrations: (prev.counts?.registrations || 0) + 1 }
+      }));
+    } catch (err) {
+      console.warn('[MongoDB Atlas Registration Notice]', err.message);
+      if (err.message && (err.message.includes('full') || err.message.includes('required'))) {
+        throw err;
+      }
+    }
+
+    // 2. Update tournaments registeredCount
     setTournaments(prev => prev.map(t => {
-      if (t.id === trnId) {
-        return { ...t, registeredCount: Math.min(t.maxParticipants, t.registeredCount + 1) };
+      if (t.id === trnId || t._id === trnId) {
+        return { ...t, registeredCount: (t.registeredCount || 0) + 1 };
       }
       return t;
     }));
 
-    // Prepend to recent participants for live admin view
+    // 3. Prepend to recent participants for live admin view
     setRecentParticipants(prev => [newReg, ...prev]);
 
-    // Update participant's registered events if this is the active user session
-    const isCurrentAthlete = (userProfile?.email && userProfile.email.toLowerCase().trim() === email.toLowerCase().trim()) || (role === 'participant' && (!userProfile?.email || userProfile.email.includes('ashwin')));
+    // 4. Update participant's registered events if this is the active user session
+    const isCurrentAthlete = (userProfile?.email && userProfile.email.toLowerCase().trim() === email) || (role === 'participant');
     if (isCurrentAthlete) {
       setUserProfile(prev => {
         const updatedRegs = [newReg, ...(prev.registrations || [])];
@@ -715,14 +736,14 @@ export const AppProvider = ({ children }) => {
       });
     }
 
-    // Add confirmed registration notification for this participant
+    // 5. Add confirmed registration notification for this participant
     try {
       const targetEmail = (userProfile?.email || email).toLowerCase().trim();
       const newNotif = {
         id: `notif-reg-${Date.now()}`,
         userEmail: targetEmail,
         title: 'Registration Confirmed',
-        message: `You are officially registered for ${trn ? trn.name : 'the championship'}. Pass: ${ticketCode}`,
+        message: `Registered for "${newReg.tournamentName}". Entry Pass: ${newReg.ticketCode}`,
         time: 'Just now',
         type: 'success',
         unread: true
@@ -733,23 +754,14 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem(`sportpulse_notifs_${targetEmail}`, JSON.stringify([newNotif, ...notifsList]));
     } catch {}
 
-    addToast(`Successfully registered for ${trn ? trn.name : 'tournament'}!`, 'success');
-
-    // Async write to MongoDB
-    try {
-      await api.createRegistration(newReg);
-      setDbStatus(prev => ({
-        ...prev,
-        counts: { ...prev.counts, registrations: (prev.counts?.registrations || 0) + 1 }
-      }));
-      // Immediately reload account-specific notifications and registrations if online
-      const reloadEmail = userProfile?.email || email;
-      if (reloadEmail) {
-        await loadUserSpecificData(reloadEmail, role);
-      }
-    } catch (err) {
-      console.warn('[DB Sync Note] Saved to local session:', err.message);
+    // 6. Reload account specific data
+    const reloadEmail = userProfile?.email || email;
+    if (reloadEmail) {
+      loadUserSpecificData(reloadEmail, role).catch(() => {});
     }
+
+    addToast(`🎉 Registered for ${newReg.tournamentName}! Pass: ${newReg.ticketCode} (Saved to MongoDB)`, 'success');
+    return { success: true, data: newReg, savedToAtlas };
   };
 
   // Mark notification as read

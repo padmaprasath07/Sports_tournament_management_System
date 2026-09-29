@@ -15,14 +15,22 @@ export const RegistrationModal = ({ tournament, onClose }) => {
     paymentMethod: 'Credit Card'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitError('');
     setIsSubmitting(true);
     try {
+      await registerForTournament(tournament.id || tournament._id, {
+        ...formData,
+        tournamentName: tournament.name,
+        sport: tournament.sport,
+      });
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      await registerForTournament(tournament.id, formData);
       onClose();
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to complete tournament registration. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -41,6 +49,13 @@ export const RegistrationModal = ({ tournament, onClose }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {submitError && (
+          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
