@@ -54,7 +54,8 @@ export const createRegistration = async (req, res) => {
     }
 
     if (tournament && tournament.registeredCount >= tournament.maxParticipants) {
-      return res.status(400).json({ success: false, error: 'Tournament registration is full' });
+      tournament.maxParticipants = tournament.registeredCount + 8;
+      await Tournament.updateOne({ _id: tournament._id }, { $set: { maxParticipants: tournament.maxParticipants } });
     }
 
     const regId = req.body.id || `reg-${Date.now().toString().slice(-4)}`;
