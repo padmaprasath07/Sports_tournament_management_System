@@ -5,18 +5,24 @@ export const connectDB = async () => {
     return mongoose.connection;
   }
 
+  const mongoUri = process.env.MONGODB_URI;
+  if (!mongoUri && (process.env.VERCEL || process.env.NODE_ENV === 'production')) {
+    console.warn('[Database Notice] MONGODB_URI environment variable is not configured on Vercel.');
+    return null;
+  }
+
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sportpulse_db';
+    const uriToConnect = mongoUri || 'mongodb://localhost:27017/sportpulse_db';
     
     // Mask credentials for safe console logging
-    const safeUri = mongoUri.includes('@') 
-      ? mongoUri.replace(/\/\/.*@/, '//***:***@') 
-      : mongoUri;
+    const safeUri = uriToConnect.includes('@') 
+      ? uriToConnect.replace(/\/\/.*@/, '//***:***@') 
+      : uriToConnect;
 
     console.log(`[Database] Connecting to MongoDB: ${safeUri}`);
 
-    const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+    const conn = await mongoose.connect(uriToConnect, {
+      serverSelectionTimeoutMS: 3000,
     });
 
     const isCloud = mongoUri.includes('mongodb+srv') || mongoUri.includes('.mongodb.net');
