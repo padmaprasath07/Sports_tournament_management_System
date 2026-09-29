@@ -11,14 +11,10 @@ export const connectDB = async () => {
     return mongoose.connection;
   }
 
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri && (process.env.VERCEL || process.env.NODE_ENV === 'production')) {
-    console.warn('[Database Notice] MONGODB_URI environment variable is not configured on Vercel.');
-    return null;
-  }
+  const ATLAS_FALLBACK_URI = 'mongodb+srv://padmaprasath2007_db_user:aNcnfrCdAhWPDhvG@cluster0.aokpkbw.mongodb.net/test?retryWrites=true&w=majority';
+  const uriToConnect = process.env.MONGODB_URI || ATLAS_FALLBACK_URI;
 
   try {
-    const uriToConnect = mongoUri || 'mongodb://localhost:27017/sportpulse_db';
     
     // Mask credentials for safe console logging
     const safeUri = uriToConnect.includes('@') 

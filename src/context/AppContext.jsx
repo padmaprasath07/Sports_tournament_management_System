@@ -462,10 +462,20 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem(`sportpulse_notifs_${cleanEmail}`, JSON.stringify([welcomeNotif, ...PUBLIC_ANNOUNCEMENTS]));
     } catch {}
 
-    // Asynchronously sync with MongoDB if server is active (won't block user if offline/mixed content)
+    // Asynchronously sync with MongoDB if server is active
     try {
-      await api.registerUser(accountData);
+      const apiRes = await api.registerUser(accountData);
+      if (apiRes?.data?._id) {
+        newUser._id = apiRes.data._id;
+        newUser.id = apiRes.data.id || newUser.id;
+        try {
+          localStorage.setItem('sportpulse_user', JSON.stringify(newUser));
+        } catch {}
+      }
     } catch (apiErr) {
+      if (apiErr.message && (apiErr.message.includes('already exists') || apiErr.message.includes('required'))) {
+        throw apiErr;
+      }
       console.info('[SportPulse Notice] Offline/Client Mode: Account saved locally.', apiErr.message);
     }
 

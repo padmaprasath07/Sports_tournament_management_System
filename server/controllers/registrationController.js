@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Registration } from '../models/Registration.js';
 import { Tournament } from '../models/Tournament.js';
 import { User } from '../models/User.js';
@@ -36,33 +37,46 @@ export const createRegistration = async (req, res) => {
       date 
     } = req.body;
 
-    const tournament = await Tournament.findOne({ id: tournamentId });
-    if (!tournament) {
-      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    let tournament = null;
+    if (tournamentId) {
+      const isObjectId = mongoose.Types.ObjectId.isValid(tournamentId);
+      tournament = await Tournament.findOne({
+        $or: [
+          { id: tournamentId },
+          ...(isObjectId ? [{ _id: tournamentId }] : []),
+          { name: tournamentId },
+        ],
+      });
+    }
+    if (!tournament && (req.body.tournamentName || req.body.tournament)) {
+      const title = req.body.tournamentName || req.body.tournament;
+      tournament = await Tournament.findOne({ name: title });
     }
 
-    if (tournament.registeredCount >= tournament.maxParticipants) {
+    if (tournament && tournament.registeredCount >= tournament.maxParticipants) {
       return res.status(400).json({ success: false, error: 'Tournament registration is full' });
     }
 
     const regId = req.body.id || `reg-${Date.now().toString().slice(-4)}`;
-    const sportPrefix = (sport || tournament.sport || 'SPT').substring(0, 3).toUpperCase();
+    const effectiveTournamentName = tournament ? tournament.name : (req.body.tournamentName || req.body.tournament || 'Campus Sports Championship');
+    const effectiveSport = sport || (tournament ? tournament.sport : 'Sports');
+    const sportPrefix = effectiveSport.substring(0, 3).toUpperCase();
     const ticketCode = req.body.ticketCode || `SP-${sportPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const effectiveFee = fee || `$${tournament.entryFee}`;
-    const effectiveAmount = typeof amount === 'number' ? amount : tournament.entryFee;
-    const effectivePaymentStatus = paymentStatus || (tournament.entryFee > 0 ? 'Paid' : 'Waived');
+    const effectiveFee = fee || (tournament ? `$${tournament.entryFee}` : '$0');
+    const effectiveAmount = typeof amount === 'number' ? amount : (tournament ? tournament.entryFee : 0);
+    const effectivePaymentStatus = paymentStatus || (effectiveAmount > 0 ? 'Paid' : 'Waived');
 
     const newRegistration = new Registration({
       id: regId,
-      tournamentId,
-      tournamentName: tournament.name,
+      tournamentId: tournament ? tournament.id : (tournamentId || 'trn-101'),
+      tournamentName: effectiveTournamentName,
       participantName: participantName || 'Student Athlete',
-      email: email || 'athlete@campus.edu',
+      email: (email || 'athlete@campus.edu').toLowerCase().trim(),
       phone: phone || '',
       team: team || 'Individual',
-      sport: sport || tournament.sport,
-      date: date || new Date().toISOString().split('T')[0],
+      sport: effectiveSport,
+      date: date || (tournament ? tournament.startDate : new Date().toISOString().split('T')[0]),
       fee: effectiveFee,
       amount: effectiveAmount,
       status: 'Approved',
@@ -72,11 +86,13 @@ export const createRegistration = async (req, res) => {
 
     const saved = await newRegistration.save();
 
-    // Increment registeredCount in Tournament document
-    await Tournament.findOneAndUpdate(
-      { id: tournamentId },
-      { $inc: { registeredCount: 1 } }
-    );
+    // Increment registeredCount in Tournament document if matched
+    if (tournament) {
+      await Tournament.updateOne(
+        { _id: tournament._id },
+        { $inc: { registeredCount: 1 } }
+      );
+    }
 
     // If user exists with this email, increment their registeredTournaments stat
     if (email) {

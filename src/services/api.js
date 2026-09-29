@@ -3,12 +3,9 @@ const resolveApiBaseUrl = () => {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  // When running in a secure HTTPS production environment (e.g. Vercel deployment),
-  // route seamlessly to the same-origin Vercel serverless /api gateway!
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return '/api';
-  }
-  return 'http://localhost:5000/api';
+  // Standard relative /api endpoint works seamlessly both in Vite dev (via proxy)
+  // and in production on Vercel serverless function!
+  return '/api';
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -17,10 +14,6 @@ const API_BASE_URL = resolveApiBaseUrl();
  * Helper to make HTTP requests with timeout
  */
 async function request(endpoint, options = {}) {
-  if (!API_BASE_URL) {
-    throw new Error('CloudBackendUnreachable: HTTPS frontend running without configured cloud backend.');
-  }
-
   const url = `${API_BASE_URL}${endpoint}`;
   const config = {
     headers: {
@@ -31,7 +24,7 @@ async function request(endpoint, options = {}) {
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout for Atlas cold starts
 
   try {
     const response = await fetch(url, {
