@@ -1,4 +1,10 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+// Ensure reliable Atlas DNS resolution on local ISPs/Windows networks
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {}
 
 export const connectDB = async () => {
   if (mongoose.connection.readyState >= 1) {
@@ -25,7 +31,7 @@ export const connectDB = async () => {
       serverSelectionTimeoutMS: 3000,
     });
 
-    const isCloud = mongoUri.includes('mongodb+srv') || mongoUri.includes('.mongodb.net');
+    const isCloud = uriToConnect.includes('mongodb+srv') || uriToConnect.includes('.mongodb.net');
     console.log(`[Database] 🚀 MongoDB Connected Successfully: ${conn.connection.host} (${isCloud ? 'MongoDB Atlas Cloud' : 'Local MongoDB'})`);
 
     mongoose.connection.on('error', (err) => {
