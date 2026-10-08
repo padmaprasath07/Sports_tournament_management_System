@@ -11,9 +11,9 @@ const matchSchema = new mongoose.Schema(
     status: {
       type: String,
       default: 'Scheduled',
-      enum: ['Scheduled', 'Live', 'Completed'],
     },
     time: { type: String, default: '' },
+    date: { type: String, default: '' },
     court: { type: String, default: '' },
   },
   { _id: false }

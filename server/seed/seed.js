@@ -40,7 +40,7 @@ export const SEED_TOURNAMENTS = [
     category: 'football',
     format: 'Knockout',
     type: 'Team',
-    status: 'Live',
+    status: 'Completed',
     startDate: '2026-08-01',
     endDate: '2026-08-10',
     registrationDeadline: '2026-07-28',
@@ -148,16 +148,16 @@ export const SEED_FIXTURES = [
       { id: 'm6', team1: 'Titan Strikers', score1: 1, team2: 'Blue Panthers', score2: 3, winner: 'Blue Panthers', status: 'Completed', time: 'FT' }
     ],
     final: [
-      { id: 'm7', team1: 'Thunder FC', score1: 2, team2: 'Blue Panthers', score2: 1, winner: 'Thunder FC', status: 'Live', time: "78'" }
+      { id: 'm7', team1: 'Thunder FC', score1: 2, team2: 'Blue Panthers', score2: 1, winner: 'Thunder FC', status: 'Completed', time: 'FT' }
     ]
   }
 ];
 
 export const SEED_REGISTRATIONS = [
-  { id: 'reg-01', tournamentId: 'trn-101', tournamentName: 'National Premier League T20 2026', participantName: 'Ashwin Kumar', email: 'ashwin.player@sportpulse.com', team: 'Royal Chargers', sport: 'Cricket', date: '2026-08-20', fee: '$1,500', amount: 1500, status: 'Approved', paymentStatus: 'Paid', ticketCode: 'SP-CRK-9921' },
-  { id: 'reg-02', tournamentId: 'trn-102', tournamentName: 'Champions Football Cup 2026', participantName: 'Kevin Peterson', email: 'kevin.p@gmail.com', team: 'Blue Panthers', sport: 'Football', date: '2026-08-01', fee: '$2,000', amount: 2000, status: 'Active', paymentStatus: 'Paid', ticketCode: 'SP-FTB-4410' },
-  { id: 'reg-03', tournamentId: 'trn-103', tournamentName: 'Metropolitan 3x3 Basketball Showdown', participantName: 'Rahul Nair', email: 'rahul.n@yahoo.com', team: 'Street Legends', sport: 'Basketball', date: '2026-09-05', fee: '$800', amount: 800, status: 'Pending Approval', paymentStatus: 'Pending', ticketCode: 'SP-BSK-7712' },
-  { id: 'reg-04', tournamentId: 'trn-105', tournamentName: 'State Badminton Singles Trophy', participantName: 'Ananya Deshmukh', email: 'ananya.d@gmail.com', team: 'Individual', sport: 'Badminton', date: '2026-07-15', fee: '$600', amount: 600, status: 'Approved', paymentStatus: 'Paid', ticketCode: 'SP-BDM-3321' }
+  { id: 'reg-01', tournamentId: 'trn-101', tournamentName: 'National Premier League T20 2026', participantName: 'Ashwin Kumar', email: 'ashwin.player@sportpulse.com', team: 'Royal Chargers', sport: 'Cricket', date: '2026-08-20', fee: '₹1,500', amount: 1500, status: 'Approved', paymentStatus: 'Paid', ticketCode: 'SP-CRK-9921' },
+  { id: 'reg-02', tournamentId: 'trn-102', tournamentName: 'Champions Football Cup 2026', participantName: 'Kevin Peterson', email: 'kevin.p@gmail.com', team: 'Blue Panthers', sport: 'Football', date: '2026-08-01', fee: '₹2,000', amount: 2000, status: 'Active', paymentStatus: 'Paid', ticketCode: 'SP-FTB-4410' },
+  { id: 'reg-03', tournamentId: 'trn-103', tournamentName: 'Metropolitan 3x3 Basketball Showdown', participantName: 'Rahul Nair', email: 'rahul.n@yahoo.com', team: 'Street Legends', sport: 'Basketball', date: '2026-09-05', fee: '₹800', amount: 800, status: 'Pending Approval', paymentStatus: 'Pending', ticketCode: 'SP-BSK-7712' },
+  { id: 'reg-04', tournamentId: 'trn-105', tournamentName: 'State Badminton Singles Trophy', participantName: 'Ananya Deshmukh', email: 'ananya.d@gmail.com', team: 'Individual', sport: 'Badminton', date: '2026-07-15', fee: '₹600', amount: 600, status: 'Approved', paymentStatus: 'Paid', ticketCode: 'SP-BDM-3321' }
 ];
 
 export const SEED_LEADERBOARD = [
@@ -171,8 +171,8 @@ export const SEED_LEADERBOARD = [
 export const SEED_NOTIFICATIONS = [
   { id: 'n1', userEmail: 'ashwin.player@sportpulse.com', role: 'participant', title: 'Registration Confirmed', message: 'You are successfully registered for National Premier League T20. Entry Ticket: SP-CRK-9921', time: '10 minutes ago', unread: true, type: 'success' },
   { id: 'n2', userEmail: 'all', role: 'all', title: 'Schedule Update', message: 'Champions Football Cup semi-final match time updated to 6:00 PM.', time: '2 hours ago', unread: true, type: 'warning' },
-  { id: 'n3', userEmail: 'all', role: 'all', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' },
-  { id: 'n4', userEmail: 'ashwin.player@sportpulse.com', role: 'participant', title: 'Payment Receipt', message: 'Payment of $1,500 processed successfully for Cricket T20 entry fee.', time: '2 days ago', unread: false, type: 'success' },
+  { id: 'n3', userEmail: 'all', role: 'all', title: 'Championship Result', message: 'Thunder FC defeated Blue Panthers (2-1) in the Grand Final!', time: '1 day ago', unread: false, type: 'info' },
+  { id: 'n4', userEmail: 'ashwin.player@sportpulse.com', role: 'participant', title: 'Payment Receipt', message: 'Payment of ₹1,500 processed successfully for Cricket T20 entry fee.', time: '2 days ago', unread: false, type: 'success' },
   { id: 'n5', userEmail: 'admin@sportpulse.com', role: 'admin', title: 'Director Overview', message: '4 active tournaments running across campus stadiums today.', time: '3 hours ago', unread: true, type: 'info' }
 ];
 

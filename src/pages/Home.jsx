@@ -82,14 +82,6 @@ export const Home = () => {
               Explore Tournaments <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Quick Demo Buttons */}
-          <div className="pt-4 flex items-center gap-4 text-xs text-slate-400">
-            <span>Instant Role Demos:</span>
-            <button onClick={() => setRole('participant')} className="underline hover:text-emerald-400 font-semibold">Participant View</button>
-            <span>•</span>
-            <button onClick={() => setRole('admin')} className="underline hover:text-blue-400 font-semibold">Admin SaaS View</button>
-          </div>
         </div>
       </section>
 
@@ -145,7 +137,11 @@ export const Home = () => {
             <TournamentCard 
               key={trn.id} 
               tournament={trn} 
-              onRegisterClick={(t) => setSelectedRegTournament(t)}
+              onRegisterClick={(t) => {
+                if (t && t.status !== 'Completed') {
+                  setSelectedRegTournament(t);
+                }
+              }}
             />
           ))}
         </div>
@@ -169,7 +165,7 @@ export const Home = () => {
             <p className="text-xs text-slate-300 font-medium">Registered Athletes</p>
           </div>
           <div className="space-y-1">
-            <h3 className="text-3xl font-extrabold font-outfit text-amber-400">$500K+</h3>
+            <h3 className="text-3xl font-extrabold font-outfit text-amber-400">₹50L+</h3>
             <p className="text-xs text-slate-300 font-medium">Prize Money Awarded</p>
           </div>
           <div className="space-y-1">
@@ -187,7 +183,11 @@ export const Home = () => {
             <TournamentCard 
               key={trn.id} 
               tournament={trn} 
-              onRegisterClick={(t) => setSelectedRegTournament(t)}
+              onRegisterClick={(t) => {
+                if (t && t.status !== 'Completed') {
+                  setSelectedRegTournament(t);
+                }
+              }}
             />
           ))}
         </div>

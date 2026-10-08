@@ -14,6 +14,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+app.options('*', cors());
+
 app.use(express.json());
 
 // Serverless DB connection middleware
@@ -26,8 +28,9 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Mount API routes
+// Mount API routes at both /api and / to handle different Vercel rewrite configurations
 app.use('/api', apiRoutes);
+app.use('/', apiRoutes);
 
 // Root Welcome
 app.get('/', (req, res) => {

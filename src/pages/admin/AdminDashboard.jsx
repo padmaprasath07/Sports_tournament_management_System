@@ -37,19 +37,25 @@ export const AdminDashboard = () => {
           </p>
         </div>
 
-        {/* Quick Action Buttons */}
+        {/* Quick Action Buttons for the 4 Core Features */}
         <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => setCurrentView('create-tournament')}
-            className="btn btn-accent btn-sm rounded-xl font-bold"
+            className="btn btn-accent btn-sm rounded-xl font-bold cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" /> Create Tournament
           </button>
           <button 
             onClick={() => setCurrentView('fixture-management')}
-            className="btn btn-outline btn-sm text-white border-white/20 hover:bg-white/10 rounded-xl"
+            className="btn btn-outline btn-sm text-white border-white/20 hover:bg-white/10 rounded-xl cursor-pointer"
           >
-            <GitBranch className="w-4 h-4" /> Fixtures
+            <Calendar className="w-4 h-4" /> Schedule Match
+          </button>
+          <button 
+            onClick={() => setCurrentView('score-management')}
+            className="btn btn-outline btn-sm text-white border-white/20 hover:bg-white/10 rounded-xl cursor-pointer"
+          >
+            <Trophy className="w-4 h-4" /> Score & Results
           </button>
         </div>
       </div>
@@ -80,11 +86,11 @@ export const AdminDashboard = () => {
         />
         <StatCard 
           title="Revenue Generated" 
-          value={`$${adminStats.totalRevenue.toLocaleString()}`} 
+          value={`₹${(adminStats.totalRevenue || 0).toLocaleString()}`} 
           icon={DollarSign} 
           color="amber"
           trend="up"
-          trendValue="24%"
+          trendValue="Live DB"
         />
       </div>
 
@@ -144,20 +150,28 @@ export const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {recentParticipants.slice(0, 5).map(p => (
-                <tr key={p.id}>
-                  <td className="font-bold text-slate-900 dark:text-slate-100">{p.participantName || p.name}</td>
-                  <td className="text-slate-600 dark:text-slate-300">{p.tournamentName || p.tournament}</td>
-                  <td><span className="badge bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{p.team || 'Individual'}</span></td>
-                  <td className="text-slate-500">{p.date}</td>
-                  <td className="text-center font-bold">${p.amount}</td>
-                  <td className="text-center">
-                    <span className={`badge ${p.paymentStatus === 'Paid' ? 'badge-success' : 'badge-warning'}`}>
-                      {p.paymentStatus}
-                    </span>
+              {recentParticipants.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-6 text-slate-400 text-xs">
+                    No participant registrations found in the database.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                recentParticipants.slice(0, 5).map(p => (
+                  <tr key={p.id}>
+                    <td className="font-bold text-slate-900 dark:text-slate-100">{p.participantName || p.name}</td>
+                    <td className="text-slate-600 dark:text-slate-300">{p.tournamentName || p.tournament}</td>
+                    <td><span className="badge bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{p.team || 'Individual'}</span></td>
+                    <td className="text-slate-500">{p.date}</td>
+                    <td className="text-center font-bold">₹{p.amount}</td>
+                    <td className="text-center">
+                      <span className={`badge ${p.paymentStatus === 'Paid' ? 'badge-success' : 'badge-warning'}`}>
+                        {p.paymentStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -81,7 +81,7 @@ export const ManageTournaments = () => {
               <th>Sport</th>
               <th>Format</th>
               <th className="text-center">Slots</th>
-              <th className="text-center">Entry Fee</th>
+              <th className="text-center">Entry Fee (₹)</th>
               <th className="text-center">Status</th>
               <th className="text-right">Actions</th>
             </tr>
@@ -103,7 +103,7 @@ export const ManageTournaments = () => {
                 <td><span className="badge bg-slate-100 dark:bg-slate-800 text-slate-700">{t.sport}</span></td>
                 <td className="text-xs text-slate-500">{t.format}</td>
                 <td className="text-center font-semibold">{t.registeredCount} / {t.maxParticipants}</td>
-                <td className="text-center font-bold">${t.entryFee}</td>
+                <td className="text-center font-bold">₹{t.entryFee}</td>
                 <td className="text-center">
                   <select
                     value={t.status}

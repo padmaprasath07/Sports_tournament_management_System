@@ -1,7 +1,12 @@
 // SportPulse API Service - Connects React Frontend to Express & MongoDB Backend
 const resolveApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
+  let base = import.meta.env.VITE_API_BASE_URL;
+  if (base && typeof base === 'string' && base.trim()) {
+    base = base.trim().replace(/\/+$/, ''); // strip trailing slashes
+    if (!base.endsWith('/api')) {
+      base = `${base}/api`; // ensure /api endpoint prefix is present
+    }
+    return base;
   }
   // Standard relative /api endpoint works seamlessly both in Vite dev (via proxy)
   // and in production on Vercel serverless function!
@@ -24,7 +29,8 @@ async function request(endpoint, options = {}) {
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout for Atlas cold starts
+  // 60s timeout accommodates Render free-tier cold starts (spins up in ~30-45s) and Atlas connection
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
     const response = await fetch(url, {
@@ -43,6 +49,8 @@ async function request(endpoint, options = {}) {
     clearTimeout(timeoutId);
     if (err.name !== 'AbortError') {
       console.info(`[SportPulse API Sync Note: ${endpoint}]`, err.message);
+    } else {
+      console.warn(`[SportPulse API Timeout: ${endpoint}] Backend cold-start or request timed out after 60s.`);
     }
     throw err;
   }
@@ -87,7 +95,7 @@ export const api = {
   },
 
   async updateUserProfile(id, updates) {
-    return request(`/users/${id}`, {
+    return request(`/users/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -129,15 +137,22 @@ export const api = {
     });
   },
 
-  // Fixtures & Match Scores
+  // Fixtures & Match Scheduling & Results
   async getFixtures() {
     return request('/fixtures');
   },
 
-  async updateMatchScore(tournamentId, { stage, matchId, score1, score2, winnerName }) {
+  async scheduleMatch(tournamentId, scheduleData) {
+    return request(`/fixtures/${tournamentId}/schedule`, {
+      method: 'PUT',
+      body: JSON.stringify(scheduleData),
+    });
+  },
+
+  async updateMatchScore(tournamentId, { stage, matchId, score1, score2, winnerName, status }) {
     return request(`/fixtures/${tournamentId}/match`, {
       method: 'PUT',
-      body: JSON.stringify({ stage, matchId, score1, score2, winnerName }),
+      body: JSON.stringify({ stage, matchId, score1, score2, winnerName, status }),
     });
   },
 

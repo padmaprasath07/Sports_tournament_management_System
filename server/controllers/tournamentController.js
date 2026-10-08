@@ -53,17 +53,28 @@ export const getTournamentById = async (req, res) => {
 export const createTournament = async (req, res) => {
   try {
     const data = req.body;
-    const id = data.id || `trn-${Date.now().toString().slice(-4)}`;
+    let id = data.id || `trn-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const existing = await Tournament.findOne({ id });
+    if (existing) {
+      id = `trn-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    }
     
+    if (!data.name || !data.sport) {
+      return res.status(400).json({ success: false, error: 'Tournament name and sport discipline are required.' });
+    }
+
     // Ensure rules is an array
     let rules = data.rules;
     if (typeof rules === 'string') {
       rules = rules.split('\n').filter(r => r.trim());
     }
 
+    const today = new Date().toISOString().split('T')[0];
     const newTournament = new Tournament({
       ...data,
       id,
+      startDate: data.startDate || today,
+      endDate: data.endDate || today,
       rules: rules || ['Standard rules apply.'],
       registeredCount: data.registeredCount || 0,
       status: data.status || 'Registration Open',
@@ -115,29 +126,42 @@ export const deleteTournament = async (req, res) => {
   }
 };
 
-// GET /api/stats
+// GET /api/stats - Aggregated metrics calculated strictly from actual MongoDB database collections
 export const getAdminStats = async (req, res) => {
   try {
-    const [totalTournaments, activeTournaments, totalParticipants, registrations] = await Promise.all([
+    const [totalTournaments, activeTournaments, totalParticipants, registrations, fixturesList] = await Promise.all([
       Tournament.countDocuments(),
-      Tournament.countDocuments({ status: { $in: ['Live', 'Registration Open', 'Upcoming'] } }),
+      Tournament.countDocuments({ status: { $in: ['Registration Open', 'Upcoming'] } }),
       Registration.countDocuments(),
       Registration.find({}, 'amount fee'),
+      Fixture.find({}, 'quarterFinals semiFinals final')
     ]);
 
     const totalRevenue = registrations.reduce((sum, reg) => {
-      const num = reg.amount || parseInt(String(reg.fee).replace(/[^0-9]/g, '')) || 0;
+      const num = typeof reg.amount === 'number' ? reg.amount : parseInt(String(reg.fee).replace(/[^0-9]/g, '')) || 0;
       return sum + num;
     }, 0);
+
+    // Count real scheduled (upcoming) matches from Fixtures collection
+    let upcomingMatchesCount = 0;
+    fixturesList.forEach(fix => {
+      ['quarterFinals', 'semiFinals', 'final'].forEach(stage => {
+        (fix[stage] || []).forEach(m => {
+          if (m.status !== 'Completed' && !m.status?.startsWith('Champion')) {
+            upcomingMatchesCount++;
+          }
+        });
+      });
+    });
 
     res.json({
       success: true,
       data: {
         totalTournaments,
         activeTournaments,
-        totalParticipants: Math.max(totalParticipants, 412),
-        totalRevenue: Math.max(totalRevenue, 342500),
-        upcomingMatchesCount: 14
+        totalParticipants,
+        totalRevenue,
+        upcomingMatchesCount
       }
     });
   } catch (error) {

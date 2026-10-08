@@ -119,7 +119,6 @@ export const BrowseTournaments = () => {
             >
               <option value="All">All Statuses</option>
               <option value="Registration Open">Registration Open</option>
-              <option value="Live">Live Now</option>
               <option value="Upcoming">Upcoming</option>
               <option value="Completed">Completed</option>
             </select>
@@ -171,7 +170,11 @@ export const BrowseTournaments = () => {
             <TournamentCard 
               key={trn.id} 
               tournament={trn} 
-              onRegisterClick={(t) => setSelectedRegTournament(t)}
+              onRegisterClick={(t) => {
+                if (t && t.status !== 'Completed') {
+                  setSelectedRegTournament(t);
+                }
+              }}
             />
           ))}
         </div>

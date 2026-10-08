@@ -37,8 +37,8 @@ export const Sidebar = () => {
     { view: 'create-tournament', label: 'Create Tournament', icon: PlusCircle },
     { view: 'manage-tournaments', label: 'Manage Tournaments', icon: FileText },
     { view: 'registered-participants', label: 'Participants & Fees', icon: Users },
-    { view: 'fixture-management', label: 'Fixture & Brackets', icon: GitBranch },
-    { view: 'live-score', label: 'Live Score Console', icon: Zap },
+    { view: 'fixture-management', label: 'Match Scheduling', icon: Calendar },
+    { view: 'score-management', label: 'Score & Result Updates', icon: Trophy },
     { view: 'reports-analytics', label: 'Reports & Analytics', icon: BarChart3 },
     { view: 'admin-profile', label: 'Admin Profile & Logs', icon: Settings }
   ];

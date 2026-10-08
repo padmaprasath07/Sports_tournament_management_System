@@ -44,7 +44,7 @@ const registrationSchema = new mongoose.Schema(
     },
     fee: {
       type: String,
-      default: '$0',
+      default: '₹0',
     },
     amount: {
       type: Number,
@@ -72,5 +72,8 @@ const registrationSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Compound index to ensure fast checks on tournamentId + email
+registrationSchema.index({ tournamentId: 1, email: 1 });
 
 export const Registration = mongoose.model('Registration', registrationSchema);

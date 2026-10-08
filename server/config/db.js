@@ -11,37 +11,41 @@ export const connectDB = async () => {
     return mongoose.connection;
   }
 
+  const LOCAL_URI = 'mongodb://localhost:27017/sportpulse_db';
   const ATLAS_FALLBACK_URI = 'mongodb+srv://padmaprasath2007_db_user:aNcnfrCdAhWPDhvG@cluster0.aokpkbw.mongodb.net/test?retryWrites=true&w=majority';
-  const uriToConnect = process.env.MONGODB_URI || ATLAS_FALLBACK_URI;
+  
+  // Prefer Atlas if specified, or automatically in cloud environments (Render / Vercel / Production)
+  const isCloudEnv = process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER) || Boolean(process.env.VERCEL);
+  const primaryUri = process.env.MONGODB_URI || process.env.ATLAS_URI || (isCloudEnv ? ATLAS_FALLBACK_URI : LOCAL_URI);
 
   try {
-    
-    // Mask credentials for safe console logging
-    const safeUri = uriToConnect.includes('@') 
-      ? uriToConnect.replace(/\/\/.*@/, '//***:***@') 
-      : uriToConnect;
-
+    const safeUri = primaryUri.includes('@') ? primaryUri.replace(/\/\/.*@/, '//***:***@') : primaryUri;
     console.log(`[Database] Connecting to MongoDB: ${safeUri}`);
 
-    const conn = await mongoose.connect(uriToConnect, {
-      serverSelectionTimeoutMS: 3000,
+    const conn = await mongoose.connect(primaryUri, {
+      serverSelectionTimeoutMS: 5000,
     });
 
-    const isCloud = uriToConnect.includes('mongodb+srv') || uriToConnect.includes('.mongodb.net');
-    console.log(`[Database] 🚀 MongoDB Connected Successfully: ${conn.connection.host} (${isCloud ? 'MongoDB Atlas Cloud' : 'Local MongoDB'})`);
+    const isCloud = primaryUri.includes('mongodb+srv') || primaryUri.includes('.mongodb.net');
+    console.log(`[Database] 🚀 MongoDB Connected Successfully: ${conn.connection.host} (${isCloud ? 'MongoDB Atlas Cloud' : 'Local MongoDB Compass (port 27017)'})`);
 
     mongoose.connection.on('error', (err) => {
       console.error(`[Database Error] Connection error: ${err.message}`);
     });
 
-    mongoose.connection.on('disconnected', () => {
-      console.warn('[Database Warning] MongoDB disconnected. Attempting reconnection...');
-    });
-
     return conn;
-  } catch (error) {
-    console.error(`[Database Error] Failed to connect to MongoDB: ${error.message}`);
-    console.warn('[Database] Starting in offline fallback mode. Database-dependent endpoints will return informative fallback messages.');
-    return null;
+  } catch (err) {
+    console.warn(`[Database] Primary connection failed: ${err.message}. Trying Atlas fallback...`);
+    try {
+      const fallbackUri = primaryUri.includes('mongodb.net') ? LOCAL_URI : ATLAS_FALLBACK_URI;
+      const conn = await mongoose.connect(fallbackUri, {
+        serverSelectionTimeoutMS: 5000,
+      });
+      console.log(`[Database] 🚀 Fallback MongoDB Connected: ${conn.connection.host}`);
+      return conn;
+    } catch (fallbackErr) {
+      console.error(`[Database Error] Both primary and fallback failed: ${fallbackErr.message}`);
+      return null;
+    }
   }
 };

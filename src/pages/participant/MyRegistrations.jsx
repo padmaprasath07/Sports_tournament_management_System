@@ -4,7 +4,8 @@ import { Ticket, Calendar, CheckCircle2, Download, QrCode, ArrowRight, Printer, 
 import { SportPulseLogo } from '../../components/SportPulseLogo';
 
 export const MyRegistrations = () => {
-  const { userProfile, setCurrentView, addToast } = useApp();
+  const { userProfile, setCurrentView, addToast, role } = useApp();
+  const isGuest = role === 'guest' || !userProfile?.email || userProfile?.role === 'Guest' || userProfile?.role === 'guest';
   const [selectedPass, setSelectedPass] = useState(null);
 
   const handlePrintPass = () => {
@@ -53,7 +54,33 @@ Present this pass or digital QR at the arena gate.`;
       </div>
 
       <div className="space-y-4">
-        {(!userProfile.registrations || userProfile.registrations.length === 0) ? (
+        {isGuest ? (
+          <div className="material-card p-12 text-center space-y-4 max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+              <Ticket className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-xl font-urbanist text-slate-800 dark:text-slate-200">Athlete Account Required</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                You are currently browsing as a <strong>Guest (Read-Only)</strong>. Please log into your athlete account to access your digital tickets and tournament passes.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+              <button 
+                onClick={() => setCurrentView('login')}
+                className="btn btn-primary text-xs py-2.5 px-5 cursor-pointer w-full sm:w-auto"
+              >
+                Log In to View Passes
+              </button>
+              <button 
+                onClick={() => setCurrentView('browse-tournaments')}
+                className="btn btn-secondary text-xs py-2.5 px-4 cursor-pointer w-full sm:w-auto"
+              >
+                Browse Tournaments
+              </button>
+            </div>
+          </div>
+        ) : (!userProfile.registrations || userProfile.registrations.length === 0) ? (
           <div className="material-card p-12 text-center space-y-3">
             <Ticket className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
             <h3 className="font-bold text-base text-slate-800 dark:text-slate-200">No Tournament Registrations Yet</h3>

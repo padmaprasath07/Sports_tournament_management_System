@@ -14,12 +14,15 @@ import {
   Share2, 
   Trophy,
   Download,
-  Printer
+  Printer,
+  Lock,
+  Clock
 } from 'lucide-react';
 
 export const TournamentDetails = () => {
-  const { selectedTournament, setCurrentView, addToast } = useApp();
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'rules' | 'bracket'
+  const { selectedTournament, setCurrentView, addToast, role, userProfile, fixtures } = useApp();
+  const isGuest = role === 'guest' || !userProfile?.email || userProfile?.role === 'Guest' || userProfile?.role === 'guest';
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'matches' | 'rules' | 'bracket'
   const [showRegModal, setShowRegModal] = useState(false);
 
   if (!selectedTournament) return null;
@@ -40,6 +43,12 @@ export const TournamentDetails = () => {
     }
   };
 
+  const userEmail = (userProfile?.email || '').toLowerCase().trim();
+  const existingUserPass = (userProfile?.registrations || []).find(
+    r => (r.tournamentId === selectedTournament.id || r.tournamentName === selectedTournament.name)
+  );
+  const isAlreadyRegistered = Boolean(existingUserPass);
+
   const handleDownloadRules = () => {
     const content = `========================================================
 SPORTSPULSE INTER-COLLEGIATE ATHLETIC FEDERATION
@@ -51,8 +60,8 @@ Tournament Format: ${selectedTournament.format}
 Host Venue: ${selectedTournament.venue}
 Sanctioned By: ${selectedTournament.organizer}
 Event Schedule: ${selectedTournament.startDate} to ${selectedTournament.endDate}
-Total Prize Pool: $${selectedTournament.prizePool?.toLocaleString()}
-Entry Fee: $${selectedTournament.entryFee}
+Total Prize Pool: ₹${selectedTournament.prizePool?.toLocaleString()}
+Entry Fee: ₹${selectedTournament.entryFee}
 Registration Deadline: ${selectedTournament.registrationDeadline}
 Max Participants / Teams: ${selectedTournament.maxParticipants}
 
@@ -96,6 +105,13 @@ Issued by SportPulse Collegiate Sports Network
     window.print();
   };
 
+  const trnFix = (fixtures && (fixtures[selectedTournament.id] || fixtures['trn-102'])) || {};
+  const allScheduledMatches = [
+    ...(trnFix.quarterFinals || []).map(m => ({ ...m, stageLabel: 'Quarterfinal' })),
+    ...(trnFix.semiFinals || []).map(m => ({ ...m, stageLabel: 'Semifinal' })),
+    ...(trnFix.final || []).map(m => ({ ...m, stageLabel: 'Grand Championship Final' }))
+  ];
+
   return (
     <div className="space-y-8 animate-fade-in">
       
@@ -130,7 +146,9 @@ Issued by SportPulse Collegiate Sports Network
             <div className="flex items-center gap-2">
               <span className="badge bg-blue-600 text-white font-bold">{selectedTournament.sport}</span>
               <span className="badge bg-white/20 text-white backdrop-blur-md">{selectedTournament.format}</span>
-              <span className="badge bg-emerald-500 text-white">{selectedTournament.status}</span>
+              <span className={`badge ${selectedTournament.status === 'Completed' ? 'bg-blue-600' : 'bg-emerald-500'} text-white`}>
+                {selectedTournament.status}
+              </span>
             </div>
 
             <h1 className="text-2xl md:text-4xl font-extrabold font-urbanist tracking-tight text-white">
@@ -152,12 +170,25 @@ Issued by SportPulse Collegiate Sports Network
             >
               <Share2 className="w-4 h-4" /> Share
             </button>
-            <button 
-              onClick={() => setShowRegModal(true)}
-              className="btn btn-accent btn-lg font-bold shadow-lg shadow-emerald-500/25"
-            >
-              <Trophy className="w-5 h-5" /> Register Now (${selectedTournament.entryFee})
-            </button>
+            {selectedTournament.status === 'Completed' ? (
+              <div className="px-5 py-3 rounded-2xl bg-white/10 border border-white/20 text-white flex items-center gap-2 font-bold text-xs backdrop-blur-md shadow-lg">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Tournament Completed • Registration Closed</span>
+              </div>
+            ) : isAlreadyRegistered ? (
+              <div className="px-5 py-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-white flex items-center gap-2 font-bold text-xs backdrop-blur-md shadow-lg">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Already Registered (Ticket: {existingUserPass.ticketCode})</span>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowRegModal(true)}
+                className="btn btn-accent btn-lg font-bold shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer"
+              >
+                {isGuest ? <Lock className="w-5 h-5 text-amber-300" /> : <Trophy className="w-5 h-5" />}
+                {isGuest ? 'Sign In to Register' : `Register Now (${selectedTournament.entryFee === 0 ? 'FREE' : `₹${selectedTournament.entryFee}`})`}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -166,11 +197,11 @@ Issued by SportPulse Collegiate Sports Network
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="material-card p-4 text-center space-y-1">
           <span className="text-xs text-slate-400 uppercase font-semibold">Prize Pool</span>
-          <p className="text-2xl font-extrabold text-amber-500 font-urbanist">${selectedTournament.prizePool.toLocaleString()}</p>
+          <p className="text-2xl font-extrabold text-amber-500 font-urbanist">₹{selectedTournament.prizePool.toLocaleString()}</p>
         </div>
         <div className="material-card p-4 text-center space-y-1">
           <span className="text-xs text-slate-400 uppercase font-semibold">Entry Fee</span>
-          <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 font-urbanist">${selectedTournament.entryFee}</p>
+          <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 font-urbanist">{selectedTournament.entryFee === 0 ? 'FREE' : `₹${selectedTournament.entryFee}`}</p>
         </div>
         <div className="material-card p-4 text-center space-y-1">
           <span className="text-xs text-slate-400 uppercase font-semibold">Max Participants</span>
@@ -186,22 +217,33 @@ Issued by SportPulse Collegiate Sports Network
       <div className="material-card p-6 space-y-6">
         
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4 text-xs font-bold">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4 text-xs font-bold overflow-x-auto pb-1">
           <button 
             onClick={() => setActiveTab('overview')}
-            className={`pb-3 transition-all ${activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
+            className={`pb-3 transition-all whitespace-nowrap ${activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
           >
             Overview & Description
           </button>
           <button 
+            onClick={() => setActiveTab('matches')}
+            className={`pb-3 transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'matches' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
+          >
+            <span>Scheduled Matches & Results</span>
+            {allScheduledMatches.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold">
+                {allScheduledMatches.length}
+              </span>
+            )}
+          </button>
+          <button 
             onClick={() => setActiveTab('rules')}
-            className={`pb-3 transition-all ${activeTab === 'rules' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
+            className={`pb-3 transition-all whitespace-nowrap ${activeTab === 'rules' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
           >
             Official Rules
           </button>
           <button 
             onClick={() => setActiveTab('bracket')}
-            className={`pb-3 transition-all ${activeTab === 'bracket' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
+            className={`pb-3 transition-all whitespace-nowrap ${activeTab === 'bracket' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
           >
             Bracket Preview
           </button>
@@ -209,6 +251,26 @@ Issued by SportPulse Collegiate Sports Network
 
         {activeTab === 'overview' && (
           <div className="space-y-4 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            {selectedTournament.status === 'Completed' && (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold flex-shrink-0">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-emerald-900 dark:text-emerald-200">Tournament Concluded & Results Finalized</h4>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">All scheduled tournament matches have been completed and official match scores verified.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setActiveTab('matches')}
+                  className="btn btn-primary text-xs py-2 px-3.5 flex-shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  View Overall Scheduled Matches &rarr;
+                </button>
+              </div>
+            )}
+
             <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">About the Championship</h3>
             <p>{selectedTournament.description}</p>
             
@@ -220,6 +282,83 @@ Issued by SportPulse Collegiate Sports Network
                 <li>Check-in opens 45 minutes prior to scheduled matches at the official grounds booth.</li>
               </ul>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'matches' && (
+          <div className="space-y-4 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Overall Scheduled & Completed Matches</h3>
+                <p className="text-slate-500 text-[11px]">Official fixtures timetable, venue allocations, and confirmed match results for {selectedTournament.name}.</p>
+              </div>
+              {selectedTournament.status === 'Completed' && (
+                <span className="badge badge-success text-[10px] font-bold self-start sm:self-auto">
+                  ✓ Tournament Completed ({allScheduledMatches.length} Matches)
+                </span>
+              )}
+            </div>
+
+            {allScheduledMatches.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                <Trophy className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="font-semibold text-slate-600 dark:text-slate-400">No scheduled matches found for this tournament yet.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Organizers will publish match schedules once team registration closes.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {allScheduledMatches.map(m => {
+                  const isCompleted = m.status === 'Completed' || (m.status && m.status.startsWith('Champion')) || (typeof m.score1 === 'number' && typeof m.score2 === 'number' && (m.score1 > 0 || m.score2 > 0));
+                  return (
+                    <div 
+                      key={m.id}
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
+                            {m.stageLabel}
+                          </span>
+                          <span className="text-slate-400 text-[10px]">Match {m.id}</span>
+                          <span className={`badge ${isCompleted ? 'badge-success' : 'badge-primary'} text-[9px] font-bold`}>
+                            {isCompleted ? '✓ Completed' : '📅 Scheduled'}
+                          </span>
+                        </div>
+                        <div className="flex items-center flex-wrap gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                          {m.date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-slate-400" /> {m.date}</span>}
+                          {m.time && <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> {m.time}</span>}
+                          {m.court && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-400" /> {m.court}</span>}
+                        </div>
+                      </div>
+
+                      {/* Score / Teams Card */}
+                      <div className="flex items-center gap-4 bg-white dark:bg-slate-900/90 px-4 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm min-w-[280px] sm:min-w-[340px] justify-between">
+                        <div className={`text-right flex-1 truncate ${m.winner === m.team1 ? 'font-extrabold text-blue-600 dark:text-blue-400' : 'font-medium text-slate-800 dark:text-slate-200'}`}>
+                          <span>{m.team1 || 'TBD'}</span>
+                          {isCompleted && <span className="ml-2 font-black text-slate-900 dark:text-white text-sm">{m.score1}</span>}
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-bold px-1.5">VS</span>
+                        <div className={`text-left flex-1 truncate ${m.winner === m.team2 ? 'font-extrabold text-blue-600 dark:text-blue-400' : 'font-medium text-slate-800 dark:text-slate-200'}`}>
+                          {isCompleted && <span className="mr-2 font-black text-slate-900 dark:text-white text-sm">{m.score2}</span>}
+                          <span>{m.team2 || 'TBD'}</span>
+                        </div>
+                      </div>
+
+                      {/* Winner / Status Pill */}
+                      <div className="text-right flex-shrink-0 min-w-[130px]">
+                        {isCompleted && m.winner ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-200/60 dark:border-amber-800/60">
+                            <Trophy className="w-3 h-3 text-amber-500" /> {m.winner}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-medium">Scheduled Match</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

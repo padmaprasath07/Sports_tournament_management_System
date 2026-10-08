@@ -34,8 +34,19 @@ export const createRegistration = async (req, res) => {
       fee,
       amount,
       paymentStatus,
-      date 
+      date,
+      role: requestRole,
+      isGuest
     } = req.body;
+
+    // Strict Guest Read-Only Enforcement: Guests cannot register or mutate data
+    const cleanEmail = (email || '').toLowerCase().trim();
+    if (!cleanEmail || isGuest || requestRole === 'guest' || cleanEmail.includes('guest') || cleanEmail === 'undefined') {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication Required: Guests have read-only access. Please log in or create an account to register for tournaments.'
+      });
+    }
 
     let tournament = null;
     if (tournamentId) {
@@ -51,6 +62,21 @@ export const createRegistration = async (req, res) => {
     if (!tournament && (req.body.tournamentName || req.body.tournament)) {
       const title = req.body.tournamentName || req.body.tournament;
       tournament = await Tournament.findOne({ name: title });
+    }
+
+    const targetTournamentId = tournament ? tournament.id : tournamentId;
+    const existingRegistration = await Registration.findOne({
+      $or: [
+        { tournamentId: targetTournamentId, email: cleanEmail },
+        ...(tournament?.name ? [{ tournamentName: tournament.name, email: cleanEmail }] : [])
+      ]
+    });
+
+    if (existingRegistration) {
+      return res.status(409).json({
+        success: false,
+        error: `You have already registered for ${tournament?.name || 'this tournament'} (Ticket: ${existingRegistration.ticketCode}). Each participant can only register once per tournament.`
+      });
     }
 
     if (tournament && tournament.registeredCount >= tournament.maxParticipants) {
@@ -75,7 +101,7 @@ export const createRegistration = async (req, res) => {
       ticketCode = `SP-${sportPrefix}-${Date.now().toString().slice(-4)}-${Math.floor(100 + Math.random() * 900)}`;
     }
 
-    const effectiveFee = fee || (tournament ? `$${tournament.entryFee}` : '$0');
+    const effectiveFee = fee || (tournament ? `₹${tournament.entryFee}` : '₹0');
     const effectiveAmount = typeof amount === 'number' ? amount : (tournament ? tournament.entryFee : 0);
     const effectivePaymentStatus = paymentStatus || (effectiveAmount > 0 ? 'Paid' : 'Waived');
 
@@ -116,12 +142,13 @@ export const createRegistration = async (req, res) => {
 
     // Create individual confirmation notification for the participant in MongoDB
     try {
+      const trnTitle = tournament ? tournament.name : (newRegistration.tournamentName || 'Tournament');
       const notif = new Notification({
-        id: `notif-${Date.now().toString().slice(-4)}`,
+        id: `notif-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
         userEmail: email ? email.toLowerCase().trim() : 'all',
         role: 'participant',
         title: 'Registration Confirmed',
-        message: `Registered for "${tournament.name}" (${newRegistration.sport}). Entry Ticket: ${ticketCode}`,
+        message: `Registered for "${trnTitle}" (${newRegistration.sport}). Entry Ticket: ${ticketCode}`,
         time: 'Just now',
         unread: true,
         type: 'success',
@@ -130,11 +157,11 @@ export const createRegistration = async (req, res) => {
 
       // Create notification for Tournament Admin
       const adminNotif = new Notification({
-        id: `notif-adm-${Date.now().toString().slice(-4)}`,
+        id: `notif-adm-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
         userEmail: 'admin@sportpulse.com',
         role: 'admin',
         title: 'New Participant Registration',
-        message: `${newRegistration.participantName} enrolled in "${tournament.name}" (${newRegistration.team}).`,
+        message: `${newRegistration.participantName} enrolled in "${trnTitle}" (${newRegistration.team}).`,
         time: 'Just now',
         unread: true,
         type: 'info',

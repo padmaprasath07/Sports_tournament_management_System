@@ -33,7 +33,7 @@ export const RevenueTrendChart = () => {
     datasets: [
       {
         fill: true,
-        label: 'Revenue ($)',
+        label: 'Revenue (₹)',
         data: [18000, 24000, 31000, 28000, 42000, 56000, 68000, 75500],
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.15)',

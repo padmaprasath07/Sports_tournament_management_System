@@ -12,6 +12,7 @@ import {
   getAllFixtures,
   getFixturesByTournament,
   updateMatchScore,
+  scheduleMatch,
 } from '../controllers/fixtureController.js';
 import {
   getRegistrations,
@@ -105,10 +106,11 @@ router.route('/tournaments/:id')
   .put(updateTournament)
   .delete(deleteTournament);
 
-// Fixtures & Match Scores
+// Fixtures & Match Scheduling & Scores
 router.get('/fixtures', getAllFixtures);
 router.get('/fixtures/:tournamentId', getFixturesByTournament);
 router.put('/fixtures/:tournamentId/match', updateMatchScore);
+router.put('/fixtures/:tournamentId/schedule', scheduleMatch);
 
 // Registrations
 router.route('/registrations')

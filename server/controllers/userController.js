@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { User } from '../models/User.js';
 import { Notification } from '../models/Notification.js';
 
@@ -164,12 +165,19 @@ export const getUsers = async (req, res) => {
   }
 };
 
-// GET /api/users/:emailOrId - Get profile by email or user ID
+// GET /api/users/:emailOrId - Get profile by email, custom id, or ObjectId
 export const getUserProfile = async (req, res) => {
   try {
     const { emailOrId } = req.params;
+    const cleanId = (emailOrId || '').trim();
+    const isObjectId = mongoose.Types.ObjectId.isValid(cleanId);
+
     const user = await User.findOne({
-      $or: [{ id: emailOrId }, { email: emailOrId.toLowerCase().trim() }],
+      $or: [
+        { id: cleanId },
+        ...(isObjectId ? [{ _id: cleanId }] : []),
+        { email: cleanId.toLowerCase() },
+      ],
     }).select('-password');
 
     if (!user) {
@@ -182,29 +190,51 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-// PUT /api/users/:id - Update user profile
+// PUT /api/users/:id - Update user profile by custom id, ObjectId, or email
 export const updateUserProfile = async (req, res) => {
   try {
-    const { name, phone, preferredSports, location, bio } = req.body;
+    const identifier = (req.params.id || '').trim();
+    const { name, email, phone, preferredSports, location, bio, stats, role } = req.body;
     const updates = {};
 
     if (name) updates.name = name;
+    if (email) updates.email = email.toLowerCase().trim();
     if (phone !== undefined) updates.phone = phone;
     if (preferredSports) updates.preferredSports = preferredSports;
-    if (location) updates.location = location;
-    if (bio) updates.bio = bio;
+    if (location !== undefined) updates.location = location;
+    if (bio !== undefined) updates.bio = bio;
+    if (stats) updates.stats = stats;
+    if (role) updates.role = role;
+
+    const isObjectId = mongoose.Types.ObjectId.isValid(identifier);
+    const searchConditions = [
+      { id: identifier },
+      ...(isObjectId ? [{ _id: identifier }] : []),
+      { email: { $regex: new RegExp(`^${identifier}$`, 'i') } }
+    ];
+
+    if (req.body.id) {
+      searchConditions.push({ id: req.body.id });
+    }
+    if (req.body.email) {
+      searchConditions.push({ email: { $regex: new RegExp(`^${req.body.email.trim()}$`, 'i') } });
+    }
 
     const updatedUser = await User.findOneAndUpdate(
-      { id: req.params.id },
+      { $or: searchConditions },
       { $set: updates },
       { new: true }
     ).select('-password');
 
     if (!updatedUser) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({ success: false, error: 'User not found in database' });
     }
 
-    res.json({ success: true, message: 'Profile updated successfully', data: updatedUser });
+    res.json({ 
+      success: true, 
+      message: 'Profile updated successfully in MongoDB', 
+      data: updatedUser 
+    });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }

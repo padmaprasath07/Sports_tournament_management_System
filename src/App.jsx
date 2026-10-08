@@ -28,12 +28,41 @@ import { CreateTournamentWizard } from './pages/admin/CreateTournamentWizard';
 import { ManageTournaments } from './pages/admin/ManageTournaments';
 import { RegisteredParticipants } from './pages/admin/RegisteredParticipants';
 import { FixtureManagement } from './pages/admin/FixtureManagement';
+import { ScoreManagement } from './pages/admin/ScoreManagement';
 import { LiveScoreConsole } from './pages/admin/LiveScoreConsole';
 import { ReportsAnalytics } from './pages/admin/ReportsAnalytics';
 import { AdminProfile } from './pages/admin/AdminProfile';
 
 const ViewRouter = () => {
-  const { currentView } = useApp();
+  const { currentView, role } = useApp();
+  const isAdmin = role === 'admin';
+  const isGuest = role === 'guest';
+
+  // Protected Views: Only Admin can access admin consoles (fixture management, result entry, tournament wizards, etc.)
+  const adminViews = [
+    'admin-dashboard',
+    'create-tournament',
+    'manage-tournaments',
+    'registered-participants',
+    'fixture-management',
+    'score-management',
+    'live-score',
+    'live-score-console',
+    'reports-analytics',
+    'admin-profile'
+  ];
+  const athletePrivateViews = ['participant-dashboard', 'participant-profile'];
+
+  if (isGuest && (adminViews.includes(currentView) || athletePrivateViews.includes(currentView))) {
+    return <Login />;
+  }
+
+  if (!isAdmin && adminViews.includes(currentView)) {
+    if (currentView === 'score-management' || currentView === 'live-score' || currentView === 'live-score-console') {
+      return <ScoreManagement />;
+    }
+    return <Home />;
+  }
 
   switch (currentView) {
     case 'home':
@@ -76,8 +105,10 @@ const ViewRouter = () => {
       return <RegisteredParticipants />;
     case 'fixture-management':
       return <FixtureManagement />;
+    case 'score-management':
     case 'live-score':
-      return <LiveScoreConsole />;
+    case 'live-score-console':
+      return <ScoreManagement />;
     case 'reports-analytics':
       return <ReportsAnalytics />;
     case 'admin-profile':

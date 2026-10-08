@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KnockoutBracket } from '../../components/KnockoutBracket';
 import { RoundRobinTable } from '../../components/RoundRobinTable';
-import { LiveScoreModal } from '../../components/Modals';
-import { GitBranch, RefreshCw, Trophy, Table } from 'lucide-react';
+import { LiveScoreModal, ScheduleMatchModal } from '../../components/Modals';
+import { GitBranch, RefreshCw, Trophy, Table, PlusCircle } from 'lucide-react';
 
 export const FixtureManagement = () => {
   const { selectedTournament, setSelectedTournamentId, tournaments, autoGenerateBracket } = useApp();
   const [activeFormat, setActiveFormat] = useState('knockout'); // 'knockout' | 'points'
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   const handleAutoGenerate = () => {
     autoGenerateBracket(selectedTournament?.id);
@@ -20,10 +21,10 @@ export const FixtureManagement = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold font-outfit">Fixture & Bracket Management</h1>
-          <p className="text-xs text-slate-500">Generate, re-seed, and inspect live tournament progression trees.</p>
+          <p className="text-xs text-slate-500">Schedule matches, auto-generate brackets, and update match results.</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <select 
             value={selectedTournament.id} 
             onChange={e => setSelectedTournamentId(e.target.value)}
@@ -34,7 +35,14 @@ export const FixtureManagement = () => {
             ))}
           </select>
 
-          <button onClick={handleAutoGenerate} className="btn btn-primary text-xs py-2 px-3 flex items-center gap-1.5">
+          <button 
+            onClick={() => setScheduleModalOpen(true)} 
+            className="btn btn-secondary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5" /> Schedule Match
+          </button>
+
+          <button onClick={handleAutoGenerate} className="btn btn-primary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer">
             <RefreshCw className="w-3.5 h-3.5" /> Auto-Generate Brackets
           </button>
         </div>
@@ -69,7 +77,7 @@ export const FixtureManagement = () => {
 
       </div>
 
-      {/* Live Score Controller Modal */}
+      {/* Update Match Result Modal */}
       {selectedMatch && (
         <LiveScoreModal 
           tournamentId={selectedMatch.trnId}
@@ -77,6 +85,14 @@ export const FixtureManagement = () => {
           match={selectedMatch.match}
           sport={selectedTournament?.sport}
           onClose={() => setSelectedMatch(null)}
+        />
+      )}
+
+      {/* Schedule Match Modal */}
+      {scheduleModalOpen && (
+        <ScheduleMatchModal 
+          tournamentId={selectedTournament?.id}
+          onClose={() => setScheduleModalOpen(false)}
         />
       )}
 

@@ -1,20 +1,21 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, MapPin, Users, Award, ChevronRight, Trophy } from 'lucide-react';
+import { Calendar, MapPin, Users, Award, ChevronRight, Trophy, Lock, CheckCircle2 } from 'lucide-react';
 
 export const TournamentCard = ({ tournament, onRegisterClick }) => {
-  const { setSelectedTournamentId, setCurrentView } = useApp();
+  const { setSelectedTournamentId, setCurrentView, role, userProfile } = useApp();
+  const isGuest = role === 'guest' || !userProfile?.email || userProfile?.role === 'Guest' || userProfile?.role === 'guest';
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Live':
-        return <span className="badge badge-danger flex items-center gap-1"><span className="live-indicator"></span> LIVE NOW</span>;
+        return <span className="badge badge-primary">Ongoing</span>;
       case 'Registration Open':
         return <span className="badge badge-success">Registration Open</span>;
       case 'Upcoming':
         return <span className="badge badge-primary">Upcoming</span>;
       case 'Completed':
-        return <span className="badge badge-info">Completed</span>;
+        return <span className="badge badge-info flex items-center gap-1 font-semibold"><CheckCircle2 className="w-3 h-3 text-emerald-400" /> Completed</span>;
       default:
         return <span className="badge badge-warning">{status}</span>;
     }
@@ -48,7 +49,7 @@ export const TournamentCard = ({ tournament, onRegisterClick }) => {
 
         <div className="absolute bottom-3 right-3 bg-emerald-500/90 text-white text-xs font-bold px-2.5 py-1 rounded-lg backdrop-blur-md flex items-center gap-1">
           <Award className="w-3.5 h-3.5" />
-          Prize: ${tournament.prizePool.toLocaleString()}
+          Prize: ₹{tournament.prizePool.toLocaleString()}
         </div>
       </div>
 
@@ -92,18 +93,46 @@ export const TournamentCard = ({ tournament, onRegisterClick }) => {
         {/* Footer CTAs */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
           <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-            Fee: {tournament.entryFee === 0 ? 'FREE' : `$${tournament.entryFee}`}
+            Fee: {tournament.entryFee === 0 ? 'FREE' : `₹${tournament.entryFee}`}
           </span>
 
           <div className="flex items-center gap-2">
-            {tournament.status === 'Registration Open' && onRegisterClick && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); onRegisterClick(tournament); }}
-                className="btn btn-primary btn-sm"
-              >
-                Register
-              </button>
-            )}
+            {(() => {
+              const isAlreadyRegistered = (userProfile?.registrations || []).some(
+                r => (r.tournamentId === tournament.id || r.tournamentName === tournament.name)
+              );
+
+              if (tournament.status === 'Completed') {
+                return (
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                    Results Finalized
+                  </span>
+                );
+              }
+
+              if (isAlreadyRegistered) {
+                return (
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-md border border-emerald-200/50 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Registered
+                  </span>
+                );
+              }
+
+              if (tournament.status === 'Registration Open' && onRegisterClick) {
+                return (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onRegisterClick(tournament); }}
+                    className="btn btn-primary btn-sm flex items-center gap-1.5 cursor-pointer"
+                    title={isGuest ? 'Sign in required to register' : 'Register for tournament'}
+                  >
+                    {isGuest && <Lock className="w-3 h-3 text-white/80" />}
+                    Register
+                  </button>
+                );
+              }
+
+              return null;
+            })()}
             <button className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>

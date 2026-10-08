@@ -42,7 +42,7 @@ export const RegisteredParticipants = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Athlete Name', 'Email', 'Tournament', 'Team', 'Fee', 'Payment Status', 'Ticket Code', 'Date'];
+    const headers = ['ID', 'Athlete Name', 'Email', 'Tournament', 'Team', 'Fee (₹)', 'Payment Status', 'Ticket Code', 'Date'];
     const rows = participants.map(p => [
       p.id,
       p.participantName || p.name,
@@ -153,7 +153,7 @@ export const RegisteredParticipants = () => {
               <th>Enrolled Tournament</th>
               <th>Team Name</th>
               <th className="text-center">Ticket Code</th>
-              <th className="text-center">Fee ($)</th>
+              <th className="text-center">Fee (₹)</th>
               <th className="text-center">Status</th>
               <th className="text-right">Action</th>
             </tr>
@@ -189,7 +189,7 @@ export const RegisteredParticipants = () => {
                     </span>
                   </td>
                   <td className="text-center font-bold text-slate-900 dark:text-slate-100">
-                    ${p.amount}
+                    ₹{p.amount}
                   </td>
                   <td className="text-center">
                     <span className={`badge ${p.paymentStatus === 'Paid' ? 'badge-success' : 'badge-warning'}`}>

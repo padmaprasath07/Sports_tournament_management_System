@@ -48,7 +48,7 @@ export const INITIAL_TOURNAMENTS = [
     category: 'football',
     format: 'Knockout',
     type: 'Team',
-    status: 'Live',
+    status: 'Completed',
     startDate: '2026-08-01',
     endDate: '2026-08-10',
     registrationDeadline: '2026-07-28',
@@ -155,7 +155,7 @@ export const MOCK_FIXTURES = {
       { id: 'm6', team1: 'Titan Strikers', score1: 1, team2: 'Blue Panthers', score2: 3, winner: 'Blue Panthers', status: 'Completed' }
     ],
     final: [
-      { id: 'm7', team1: 'Thunder FC', score1: 2, team2: 'Blue Panthers', score2: 1, winner: 'Thunder FC', status: 'Live', time: "78'" }
+      { id: 'm7', team1: 'Thunder FC', score1: 2, team2: 'Blue Panthers', score2: 1, winner: 'Thunder FC', status: 'Completed', time: 'FT' }
     ]
   }
 };
@@ -180,8 +180,8 @@ export const MOCK_LEADERBOARD = [
 export const MOCK_NOTIFICATIONS = [
   { id: 'n1', title: 'Registration Confirmed', message: 'You are successfully registered for National Premier League T20.', time: '10 minutes ago', unread: true, type: 'success' },
   { id: 'n2', title: 'Schedule Update', message: 'Champions Football Cup semi-final match time updated to 6:00 PM.', time: '2 hours ago', unread: true, type: 'warning' },
-  { id: 'n3', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' },
-  { id: 'n4', title: 'Payment Receipt', message: 'Payment of $1,500 processed successfully for Cricket T20 entry fee.', time: '2 days ago', unread: false, type: 'success' }
+  { id: 'n3', title: 'Championship Result', message: 'Thunder FC defeated Blue Panthers (2-1) in the Grand Final!', time: '1 day ago', unread: false, type: 'info' },
+  { id: 'n4', title: 'Payment Receipt', message: 'Payment of ₹1,500 processed successfully for Cricket T20 entry fee.', time: '2 days ago', unread: false, type: 'success' }
 ];
 
 export const MOCK_PARTICIPANT_PROFILE = {
@@ -193,24 +193,23 @@ export const MOCK_PARTICIPANT_PROFILE = {
   preferredSports: ['Cricket', 'Football', 'Badminton'],
   bio: 'Passionate amateur cricketer and football winger. Played state-level tournaments and love competitive sports.',
   stats: {
-    registeredTournaments: 3,
-    upcomingMatches: 2,
-    wins: 12,
-    certificates: 3
+    registeredTournaments: 2,
+    upcomingMatches: 0,
+    wins: 0,
+    certificates: 0
   },
   registrations: [
-    { id: 'reg-01', tournamentName: 'National Premier League T20 2026', sport: 'Cricket', date: '2026-08-20', fee: '$1,500', status: 'Approved', ticketCode: 'SP-CRK-9921' },
-    { id: 'reg-02', tournamentName: 'Champions Football Cup 2026', sport: 'Football', date: '2026-08-01', fee: '$2,000', status: 'Active', ticketCode: 'SP-FTB-4410' },
-    { id: 'reg-03', tournamentName: 'Metropolitan 3x3 Basketball', sport: 'Basketball', date: '2026-09-05', fee: '$800', status: 'Pending Approval', ticketCode: 'SP-BSK-7712' }
+    { id: 'reg-01', tournamentName: 'National Premier League T20 2026', sport: 'Cricket', date: '2026-08-20', fee: '₹1,500', status: 'Approved', ticketCode: 'SP-CRK-9921' },
+    { id: 'reg-02', tournamentName: 'Grandmasters Open Chess Championship', sport: 'Chess', date: '2026-08-10', fee: '₹200', status: 'Approved', ticketCode: 'SP-CHE-5794' }
   ]
 };
 
 export const MOCK_ADMIN_STATS = {
-  totalTournaments: 28,
-  activeTournaments: 6,
-  totalParticipants: 412,
-  totalRevenue: 342500,
-  upcomingMatchesCount: 14
+  totalTournaments: 5,
+  activeTournaments: 3,
+  totalParticipants: 18,
+  totalRevenue: 19345,
+  upcomingMatchesCount: 0
 };
 
 export const MOCK_RECENT_PARTICIPANTS = [

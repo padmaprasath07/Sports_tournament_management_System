@@ -6,6 +6,7 @@ export const AdminProfile = () => {
   const { userProfile, updateUserProfile, addToast } = useApp();
   const [adminName, setAdminName] = useState(userProfile?.name || 'Tournament Director');
   const [email, setEmail] = useState(userProfile?.email || 'admin@sportpulse.com');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userProfile?.name) setAdminName(userProfile.name);
@@ -14,10 +15,15 @@ export const AdminProfile = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (updateUserProfile) {
-      await updateUserProfile({ name: adminName, email });
-    } else {
-      addToast('Admin system settings saved!', 'success');
+    setIsSaving(true);
+    try {
+      if (updateUserProfile) {
+        await updateUserProfile({ name: adminName, email });
+      } else {
+        addToast('Admin system settings saved!', 'success');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -76,8 +82,13 @@ export const AdminProfile = () => {
             </div>
 
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-              <button type="submit" className="btn btn-primary py-2 px-4 text-xs font-semibold">
-                <Save className="w-4 h-4" /> Save System Settings
+              <button 
+                type="submit" 
+                disabled={isSaving}
+                className="btn btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-2 disabled:opacity-50"
+              >
+                <Save className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} /> 
+                {isSaving ? 'Saving Settings...' : 'Save System Settings'}
               </button>
             </div>
           </form>

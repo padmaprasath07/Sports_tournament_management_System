@@ -5,9 +5,11 @@ import {
   MOCK_PARTICIPANT_PROFILE,
   MOCK_ADMIN_STATS,
   MOCK_RECENT_PARTICIPANTS,
-  MOCK_FIXTURES
+  MOCK_FIXTURES,
+  MOCK_LEADERBOARD
 } from '../data/mockData';
 import { api } from '../services/api';
+import confetti from 'canvas-confetti';
 
 export const GUEST_PROFILE = {
   name: 'Guest Explorer',
@@ -40,7 +42,7 @@ export const ADMIN_PROFILE = {
 
 export const PUBLIC_ANNOUNCEMENTS = [
   { id: 'pub-1', userEmail: 'all', role: 'all', title: 'Schedule Update', message: 'Champions Football Cup semi-final match time updated to 6:00 PM.', time: '2 hours ago', unread: true, type: 'warning' },
-  { id: 'pub-2', userEmail: 'all', role: 'all', title: 'Live Match Alert', message: 'Thunder FC vs Blue Panthers Final match is now LIVE!', time: '1 day ago', unread: false, type: 'info' }
+  { id: 'pub-2', userEmail: 'all', role: 'all', title: 'Championship Result', message: 'Thunder FC defeated Blue Panthers (2-1) in the Grand Final!', time: '1 day ago', unread: false, type: 'info' }
 ];
 
 // Default demo accounts with preconfigured credentials
@@ -55,7 +57,7 @@ export const DEFAULT_ACCOUNTS = [
     location: 'Bangalore, Karnataka',
     preferredSports: ['Football', 'Cricket', 'Badminton'],
     bio: 'Varsity Striker & Athletics Team Captain. 3x Inter-College Gold Medalist.',
-    stats: { registeredTournaments: 3, upcomingMatches: 2, wins: 12, certificates: 3 },
+    stats: { registeredTournaments: 2, upcomingMatches: 0, wins: 0, certificates: 0 },
     registrations: MOCK_PARTICIPANT_PROFILE.registrations
   },
   {
@@ -68,7 +70,7 @@ export const DEFAULT_ACCOUNTS = [
     location: 'Athletic Department HQ',
     preferredSports: ['Football', 'Cricket', 'Basketball', 'Badminton'],
     bio: 'Campus Sports Administrator & Tournament Organizer.',
-    stats: { registeredTournaments: 5, upcomingMatches: 14, wins: 0, certificates: 0 },
+    stats: { registeredTournaments: 0, upcomingMatches: 0, wins: 0, certificates: 0 },
     registrations: []
   }
 ];
@@ -105,6 +107,7 @@ export const AppProvider = ({ children }) => {
   const [adminStats, setAdminStats] = useState(MOCK_ADMIN_STATS);
   const [recentParticipants, setRecentParticipants] = useState(MOCK_RECENT_PARTICIPANTS);
   const [fixtures, setFixtures] = useState(MOCK_FIXTURES);
+  const [leaderboard, setLeaderboard] = useState(MOCK_LEADERBOARD);
   const [toasts, setToasts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSportFilter, setSelectedSportFilter] = useState('All');
@@ -271,12 +274,13 @@ export const AppProvider = ({ children }) => {
           counts: health.database.counts,
         });
 
-        // Parallel fetch global tournaments, fixtures, all registrations (for admin feed), and stats
-        const [trnRes, fixRes, regRes, statsRes] = await Promise.allSettled([
+        // Parallel fetch global tournaments, fixtures, all registrations (for admin feed), stats, and leaderboard
+        const [trnRes, fixRes, regRes, statsRes, leadRes] = await Promise.allSettled([
           api.getTournaments(),
           api.getFixtures(),
           api.getRegistrations(),
           api.getAdminStats(),
+          api.getLeaderboard(),
         ]);
 
         if (trnRes.status === 'fulfilled' && trnRes.value.data?.length > 0) {
@@ -285,7 +289,7 @@ export const AppProvider = ({ children }) => {
         if (fixRes.status === 'fulfilled' && fixRes.value.data) {
           setFixtures(fixRes.value.data);
         }
-        if (regRes.status === 'fulfilled' && regRes.value.data?.length > 0) {
+        if (regRes.status === 'fulfilled' && Array.isArray(regRes.value.data)) {
           const allRegs = regRes.value.data.map(r => ({
             ...r,
             name: r.participantName || r.name || 'Student Athlete',
@@ -301,6 +305,9 @@ export const AppProvider = ({ children }) => {
         }
         if (statsRes.status === 'fulfilled' && statsRes.value.data) {
           setAdminStats(statsRes.value.data);
+        }
+        if (leadRes.status === 'fulfilled' && leadRes.value.data?.length > 0) {
+          setLeaderboard(leadRes.value.data);
         }
       }
     } catch {
@@ -549,7 +556,7 @@ export const AppProvider = ({ children }) => {
 
   // Tournament Creation Handler - persists to MongoDB
   const createTournament = async (newTrnData) => {
-    const id = `trn-${Date.now().toString().slice(-4)}`;
+    const id = `trn-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
     const newTrn = {
       id,
       ...newTrnData,
@@ -559,45 +566,53 @@ export const AppProvider = ({ children }) => {
       rules: newTrnData.rules ? (typeof newTrnData.rules === 'string' ? newTrnData.rules.split('\n') : newTrnData.rules) : ['Standard rules apply.']
     };
 
-    // Optimistic UI update
+    // Async write to MongoDB Atlas first
+    let savedToAtlas = false;
+    try {
+      const apiRes = await api.createTournament(newTrn);
+      if (apiRes?.data?._id) {
+        newTrn._id = apiRes.data._id;
+        newTrn.id = apiRes.data.id || newTrn.id;
+        savedToAtlas = true;
+      }
+      setDbStatus(prev => ({
+        ...prev,
+        counts: { ...prev.counts, tournaments: (prev.counts?.tournaments || 0) + 1 }
+      }));
+      addToast(`🏆 Tournament "${newTrn.name}" created and saved to MongoDB!`, 'success');
+    } catch (err) {
+      console.warn('[DB Sync Note] Backend error:', err.message);
+      addToast(`Saved in active session (DB notice: ${err.message})`, 'warning');
+    }
+
+    // Update active UI state
     setTournaments(prev => [newTrn, ...prev]);
     setAdminStats(prev => ({
       ...prev,
       totalTournaments: prev.totalTournaments + 1
     }));
-    addToast(`Tournament "${newTrn.name}" created successfully!`, 'success');
     setCurrentView('manage-tournaments');
-
-    // Async write to MongoDB
-    try {
-      await api.createTournament(newTrn);
-      setDbStatus(prev => ({
-        ...prev,
-        counts: { ...prev.counts, tournaments: (prev.counts?.tournaments || 0) + 1 }
-      }));
-    } catch (err) {
-      console.warn('[DB Sync Note] Saved to local memory:', err.message);
-    }
   };
 
   // Delete Tournament Handler - cascades in MongoDB
   const deleteTournament = async (id) => {
+    try {
+      await api.deleteTournament(id);
+      addToast('Tournament deleted from MongoDB database', 'warning');
+    } catch (err) {
+      console.warn('[DB Sync Note]', err.message);
+      addToast(`Removed from current view (DB note: ${err.message})`, 'info');
+    }
+
     setTournaments(prev => prev.filter(t => t.id !== id));
     setAdminStats(prev => ({
       ...prev,
       totalTournaments: Math.max(0, prev.totalTournaments - 1)
     }));
-    addToast('Tournament deleted', 'warning');
-
-    try {
-      await api.deleteTournament(id);
-      setDbStatus(prev => ({
-        ...prev,
-        counts: { ...prev.counts, tournaments: Math.max(0, (prev.counts?.tournaments || 1) - 1) }
-      }));
-    } catch (err) {
-      console.warn('[DB Sync Note]', err.message);
-    }
+    setDbStatus(prev => ({
+      ...prev,
+      counts: { ...prev.counts, tournaments: Math.max(0, (prev.counts?.tournaments || 1) - 1) }
+    }));
   };
 
   // Toggle Publish / Status
@@ -610,12 +625,13 @@ export const AppProvider = ({ children }) => {
       }
       return t;
     }));
-    addToast('Tournament status updated', 'info');
 
     try {
       await api.updateTournament(id, { status: nextStatus });
+      addToast(`Tournament status updated to ${nextStatus} in MongoDB`, 'info');
     } catch (err) {
       console.warn('[DB Sync Note]', err.message);
+      addToast(`Status updated in view (Sync note: ${err.message})`, 'warning');
     }
   };
 
@@ -626,25 +642,45 @@ export const AppProvider = ({ children }) => {
       }
       return t;
     }));
-    addToast(`Tournament status changed to ${status}`, 'info');
 
     try {
       await api.updateTournament(id, { status });
+      addToast(`Tournament status changed to ${status} in MongoDB!`, 'info');
     } catch (err) {
       console.warn('[DB Sync Note]', err.message);
+      addToast(`Status updated in view (Sync note: ${err.message})`, 'warning');
     }
   };
 
   // Participant Register for Tournament - creates Registration document in MongoDB Atlas
   const registerForTournament = async (trnId, regForm = {}) => {
+    // Guest Read-Only Enforcement: Guests cannot register, must sign in
+    if (!userProfile?.email || role === 'guest' || userProfile?.role === 'guest' || userProfile?.role === 'Guest') {
+      setCurrentView('login');
+      addToast('Guests have read-only access. Please log into an athlete account to register.', 'warning');
+      throw new Error('Authentication Required: Guests have read-only access. Please sign in to register for tournaments.');
+    }
+
     const trn = tournaments.find(t => t.id === trnId || t._id === trnId || String(t._id) === String(trnId));
+    const effectiveTrnId = trn ? trn.id : trnId;
+    const effectiveTrnName = trn ? trn.name : (regForm.tournamentName || '');
+
+    // Duplicate Registration Prevention: A user can only register once per tournament
+    const alreadyRegistered = (userProfile?.registrations || []).some(
+      r => (r.tournamentId === effectiveTrnId || (effectiveTrnName && r.tournamentName === effectiveTrnName))
+    );
+    if (alreadyRegistered) {
+      addToast(`You have already registered for ${trn?.name || 'this tournament'}. Each user is allowed only one registration per tournament.`, 'warning');
+      throw new Error(`You have already registered for ${trn?.name || 'this tournament'}. Duplicate registrations are not allowed.`);
+    }
+
     const sportPrefix = (trn?.sport || regForm.sport || 'SPT').substring(0, 3).toUpperCase();
     const participantName = regForm.participantName || regForm.name || userProfile.name || 'Student Athlete';
     const email = (regForm.email || userProfile.email || 'athlete@campus.edu').toLowerCase().trim();
     const phone = regForm.phone || userProfile.phone || '';
     const team = regForm.teamName || regForm.team || 'Individual';
     const entryFee = trn ? trn.entryFee : 0;
-    const fee = `$${entryFee}`;
+    const fee = `₹${entryFee}`;
     const amount = entryFee;
     const paymentStatus = entryFee > 0 ? (regForm.paymentMethod ? 'Paid' : 'Paid') : 'Waived';
     const sport = trn ? trn.sport : (regForm.sport || 'Sports');
@@ -785,67 +821,229 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Update Live Match Score - persists to MongoDB
+  // Update Live Match Score - persists to MongoDB and advances winning team (Admin Only)
   const updateMatchScore = async (trnId, stage, matchId, score1, score2, winnerName) => {
+    // Only Admin can enter official match results
+    if (role !== 'admin' && userProfile?.role !== 'admin') {
+      addToast('Permission Denied: Only tournament administrators can record official match results.', 'error');
+      throw new Error('Permission Denied: Official match results can only be recorded by tournament administrators.');
+    }
+
     const s1 = parseInt(score1);
     const s2 = parseInt(score2);
+    let calculatedWinner = winnerName;
 
     setFixtures(prev => {
-      const trnFixtures = prev[trnId] || {};
-      const stageMatches = trnFixtures[stage] || [];
-      const updatedMatches = stageMatches.map(m => {
-        if (m.id === matchId) {
-          return {
-            ...m,
-            score1: s1,
-            score2: s2,
-            winner: winnerName || (s1 > s2 ? m.team1 : m.team2),
-            status: 'Completed'
-          };
+      const trnFixtures = prev[trnId] || prev['trn-102'] || {};
+      const qf = (trnFixtures.quarterFinals || []).map(m => ({ ...m }));
+      const sf = (trnFixtures.semiFinals || []).map(m => ({ ...m }));
+      const fn = (trnFixtures.final || []).map(m => ({ ...m }));
+
+      let stageList = stage === 'quarterFinals' ? qf : (stage === 'semiFinals' ? sf : fn);
+      const matchIndex = stageList.findIndex(m => m.id === matchId);
+
+      if (matchIndex !== -1) {
+        const currentMatch = stageList[matchIndex];
+        currentMatch.score1 = s1;
+        currentMatch.score2 = s2;
+        currentMatch.status = 'Completed';
+        if (!calculatedWinner || calculatedWinner === 'Draw') {
+          calculatedWinner = s1 > s2 ? currentMatch.team1 : currentMatch.team2;
         }
-        return m;
-      });
+        currentMatch.winner = calculatedWinner;
+
+        // Dynamically move the winning team into the next round!
+        if (stage === 'quarterFinals') {
+          // Quarter Finals -> Semi Finals (m1/m2 -> sf[0], m3/m4 -> sf[1])
+          if (matchIndex === 0 || matchId === 'm1') {
+            if (sf[0]) {
+              sf[0].team1 = calculatedWinner;
+              if (sf[0].team2 && !sf[0].team2.includes('TBD')) sf[0].status = 'Upcoming';
+            }
+          } else if (matchIndex === 1 || matchId === 'm2') {
+            if (sf[0]) {
+              sf[0].team2 = calculatedWinner;
+              if (sf[0].team1 && !sf[0].team1.includes('TBD')) sf[0].status = 'Upcoming';
+            }
+          } else if (matchIndex === 2 || matchId === 'm3') {
+            if (sf[1]) {
+              sf[1].team1 = calculatedWinner;
+              if (sf[1].team2 && !sf[1].team2.includes('TBD')) sf[1].status = 'Upcoming';
+            }
+          } else if (matchIndex === 3 || matchId === 'm4') {
+            if (sf[1]) {
+              sf[1].team2 = calculatedWinner;
+              if (sf[1].team1 && !sf[1].team1.includes('TBD')) sf[1].status = 'Upcoming';
+            }
+          }
+        } else if (stage === 'semiFinals') {
+          // Semi Finals -> Grand Final (m5 -> fn[0].team1, m6 -> fn[0].team2)
+          if (matchIndex === 0 || matchId === 'm5') {
+            if (fn[0]) {
+              fn[0].team1 = calculatedWinner;
+              if (fn[0].team2 && !fn[0].team2.includes('TBD')) fn[0].status = 'Grand Final';
+            }
+          } else if (matchIndex === 1 || matchId === 'm6') {
+            if (fn[0]) {
+              fn[0].team2 = calculatedWinner;
+              if (fn[0].team1 && !fn[0].team1.includes('TBD')) fn[0].status = 'Grand Final';
+            }
+          }
+        } else if (stage === 'final') {
+          if (fn[0]) {
+            fn[0].status = `Champion: ${calculatedWinner}`;
+          }
+        }
+      }
+
       return {
         ...prev,
         [trnId]: {
-          ...trnFixtures,
-          [stage]: updatedMatches
+          quarterFinals: qf,
+          semiFinals: sf,
+          final: fn
         }
       };
     });
 
-    addToast('Match scorecard updated and saved to MongoDB!', 'success');
+    if (stage === 'quarterFinals') {
+      addToast(`🎉 ${calculatedWinner} won and advanced to the Semi-Finals!`, 'success');
+    } else if (stage === 'semiFinals') {
+      addToast(`⚡ ${calculatedWinner} won and advanced to the Grand Championship Final!`, 'success');
+    } else if (stage === 'final') {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      addToast(`🏆 CHAMPION CROWNED! ${calculatedWinner} wins the tournament!`, 'success');
+    } else {
+      addToast('Match scorecard updated and saved to MongoDB!', 'success');
+    }
 
-    // Async write to MongoDB
+    // Async write to MongoDB with admin credentials
     try {
       await api.updateMatchScore(trnId, {
         stage,
         matchId,
         score1: s1,
         score2: s2,
-        winnerName
+        winnerName: calculatedWinner,
+        role: 'admin',
+        adminEmail: userProfile?.email
       });
+
+      // Refresh leaderboard after match score update
+      try {
+        const refreshedLb = await api.getLeaderboard();
+        if (refreshedLb.data && refreshedLb.data.length > 0) {
+          setLeaderboard(refreshedLb.data);
+        }
+      } catch (lbErr) {}
     } catch (err) {
       console.warn('[DB Sync Note]', err.message);
     }
   };
 
+  // Admin Match Scheduling Handler - assigns teams, date, time, and venue to a fixture
+  const scheduleMatch = async (trnId, matchData) => {
+    if (role !== 'admin') {
+      addToast('Permission Denied: Only tournament administrators can schedule matches.', 'error');
+      throw new Error('Permission Denied: Only administrators can schedule matches.');
+    }
+
+    const { stage = 'quarterFinals', matchId, team1, team2, date, time, court } = matchData;
+
+    setFixtures(prev => {
+      const trnFixtures = prev[trnId] || { quarterFinals: [], semiFinals: [], final: [] };
+      const qf = (trnFixtures.quarterFinals || []).map(m => ({ ...m }));
+      const sf = (trnFixtures.semiFinals || []).map(m => ({ ...m }));
+      const fn = (trnFixtures.final || []).map(m => ({ ...m }));
+      let stageList = stage === 'quarterFinals' ? qf : (stage === 'semiFinals' ? sf : fn);
+
+      const matchIdx = stageList.findIndex(m => m.id === matchId);
+      if (matchIdx !== -1) {
+        stageList[matchIdx] = {
+          ...stageList[matchIdx],
+          team1: team1 || stageList[matchIdx].team1,
+          team2: team2 || stageList[matchIdx].team2,
+          date: date || stageList[matchIdx].date,
+          time: time || stageList[matchIdx].time,
+          court: court || stageList[matchIdx].court,
+          status: 'Scheduled'
+        };
+      } else {
+        stageList.push({
+          id: matchId || `m-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+          team1: team1 || 'TBD',
+          team2: team2 || 'TBD',
+          score1: 0,
+          score2: 0,
+          winner: '',
+          status: 'Scheduled',
+          date: date || new Date().toISOString().split('T')[0],
+          time: time || '10:00 AM',
+          court: court || 'Court 1'
+        });
+      }
+
+      return {
+        ...prev,
+        [trnId]: { quarterFinals: qf, semiFinals: sf, final: fn }
+      };
+    });
+
+    addToast(`Match scheduled: ${team1} vs ${team2} (${date || 'Upcoming'})`, 'success');
+
+    try {
+      await api.scheduleMatch(trnId, { ...matchData, role: 'admin' });
+    } catch (err) {
+      console.warn('[DB Schedule Note]', err.message);
+    }
+  };
+
   // Update Profile Data and persist across app and local storage
   const updateUserProfile = async (updates) => {
+    let mergedProfile = null;
     setUserProfile(prev => {
-      const merged = { ...prev, ...updates };
+      mergedProfile = { ...prev, ...updates };
       try {
-        localStorage.setItem('sportpulse_user', JSON.stringify(merged));
+        localStorage.setItem('sportpulse_user', JSON.stringify(mergedProfile));
       } catch {}
-      return merged;
+      return mergedProfile;
     });
+
+    // Also update in registered users cache in localStorage
+    try {
+      const storedUsers = getStoredUsers();
+      const targetEmail = (updates.email || userProfile?.email || '').toLowerCase().trim();
+      const targetId = userProfile?.id || userProfile?._id || updates.id;
+      const updatedUsers = storedUsers.map(u => {
+        if ((targetEmail && u.email?.toLowerCase().trim() === targetEmail) || (targetId && u.id === targetId)) {
+          return { ...u, ...updates };
+        }
+        return u;
+      });
+      saveStoredUsers(updatedUsers);
+    } catch {}
 
     addToast('Profile changes saved successfully!', 'success');
 
-    // Async sync to MongoDB backend if user has an id or email
+    // Async sync to MongoDB backend
     try {
-      if (userProfile?._id || userProfile?.id) {
-        await api.updateUserProfile(userProfile._id || userProfile.id, updates);
+      const lookupId = userProfile?._id || userProfile?.id || userProfile?.email || updates._id || updates.id || updates.email;
+      if (lookupId) {
+        const res = await api.updateUserProfile(lookupId, updates);
+        if (res?.data) {
+          setUserProfile(prev => {
+            const updated = {
+              ...prev,
+              ...res.data,
+              stats: res.data.stats || prev?.stats,
+              registrations: prev?.registrations || []
+            };
+            try {
+              localStorage.setItem('sportpulse_user', JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+        }
       }
     } catch (err) {
       console.warn('[Profile Sync Note]', err.message);
@@ -869,12 +1067,12 @@ export const AppProvider = ({ children }) => {
     ];
 
     const newSemiFinals = [
-      { id: 'm5', team1: shuffled[0], score1: 0, team2: shuffled[2], score2: 0, winner: null, status: 'TBD', time: 'Tomorrow' },
-      { id: 'm6', team1: shuffled[4], score1: 0, team2: shuffled[6], score2: 0, winner: null, status: 'TBD', time: 'Tomorrow' }
+      { id: 'm5', team1: 'TBD (Winner QF-1)', score1: 0, team2: 'TBD (Winner QF-2)', score2: 0, winner: null, status: 'Upcoming', time: 'Tomorrow 02:00 PM' },
+      { id: 'm6', team1: 'TBD (Winner QF-3)', score1: 0, team2: 'TBD (Winner QF-4)', score2: 0, winner: null, status: 'Upcoming', time: 'Tomorrow 04:30 PM' }
     ];
 
     const newFinal = [
-      { id: 'm7', team1: shuffled[0], score1: 0, team2: shuffled[4], score2: 0, winner: null, status: 'Grand Final', time: 'Sunday 6:00 PM' }
+      { id: 'm7', team1: 'TBD (Winner SF-1)', score1: 0, team2: 'TBD (Winner SF-2)', score2: 0, winner: null, status: 'Grand Final', time: 'Sunday 06:00 PM' }
     ];
 
     setFixtures(prev => ({
@@ -886,7 +1084,7 @@ export const AppProvider = ({ children }) => {
       }
     }));
 
-    addToast('Balanced tournament elimination bracket regenerated with seeded teams!', 'success');
+    addToast('Knockout bracket generated with 8 seeded teams! Winners will automatically advance as matches are scored.', 'success');
   };
 
   const selectedTournament = tournaments.find(t => t.id === selectedTournamentId) || tournaments[0];
@@ -913,6 +1111,7 @@ export const AppProvider = ({ children }) => {
         continueAsGuest,
         logout,
         updateMatchScore,
+        scheduleMatch,
         updateUserProfile,
         autoGenerateBracket,
         notifications,
@@ -924,6 +1123,8 @@ export const AppProvider = ({ children }) => {
         adminStats,
         recentParticipants,
         fixtures,
+        leaderboard,
+        setLeaderboard,
         toasts,
         addToast,
         removeToast,

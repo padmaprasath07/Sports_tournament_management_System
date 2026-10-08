@@ -12,7 +12,7 @@ export const ReportsAnalytics = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Tournament Name', 'Sport', 'Category', 'Format', 'Status', 'Registered Athletes', 'Max Capacity', 'Entry Fee ($)', 'Total Revenue ($)'];
+    const headers = ['Tournament Name', 'Sport', 'Category', 'Format', 'Status', 'Registered Athletes', 'Max Capacity', 'Entry Fee (₹)', 'Total Revenue (₹)'];
     const rows = tournaments.map(t => [
       `"${t.name}"`,
       t.sport,

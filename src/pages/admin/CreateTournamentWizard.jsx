@@ -295,7 +295,7 @@ export const CreateTournamentWizard = () => {
             
             <div className="grid grid-cols-3 gap-3">
               <div className="form-group">
-                <label className="form-label">Entry Fee ($)</label>
+                <label className="form-label">Entry Fee (₹)</label>
                 <input 
                   type="number" 
                   required
@@ -306,7 +306,7 @@ export const CreateTournamentWizard = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Prize Pool Pool ($)</label>
+                <label className="form-label">Prize Pool (₹)</label>
                 <input 
                   type="number" 
                   required
