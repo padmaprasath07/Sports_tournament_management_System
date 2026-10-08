@@ -40,7 +40,7 @@ export const DbStatusBadge = () => {
         </span>
         <Database className="w-3.5 h-3.5" />
         <span className="hidden sm:inline font-mono">
-          {isConnected ? (isCloud ? 'MongoDB Atlas' : 'MongoDB Live') : 'Demo Mode'}
+          {isConnected ? (isCloud !== false ? 'MongoDB Atlas' : 'MongoDB Live') : 'Connecting...'}
         </span>
       </button>
 

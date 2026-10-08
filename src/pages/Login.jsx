@@ -46,15 +46,15 @@ export const Login = () => {
     }
   };
 
-  const handleAutofillDemo = (roleType) => {
+  const handleAutofill = (roleType) => {
     if (roleType === 'participant') {
       setEmail('ashwin.player@sportpulse.com');
       setPassword('password123');
-      addToast('Demo athlete credentials loaded.', 'info');
+      addToast('Athlete credentials filled.', 'info');
     } else if (roleType === 'admin') {
       setEmail('admin@sportpulse.com');
       setPassword('password123');
-      addToast('Demo tournament admin credentials loaded.', 'info');
+      addToast('Admin credentials filled.', 'info');
     }
   };
 
@@ -235,16 +235,16 @@ export const Login = () => {
               </div>
               <button
                 type="button"
-                onClick={() => handleAutofillDemo(activeTab)}
+                onClick={() => handleAutofill(activeTab)}
                 className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
                   activeTab === 'admin'
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-700'
                     : 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-700'
                 }`}
-                title="Fill verified demo credentials"
+                title="Auto-fill credentials"
               >
                 <Zap className="w-3 h-3" />
-                <span>Fill Demo</span>
+                <span>Quick Fill</span>
               </button>
             </div>
 
@@ -274,7 +274,7 @@ export const Login = () => {
                 </label>
                 <button
                   type="button"
-                  onClick={() => addToast('Demo password is: password123', 'info')}
+                  onClick={() => addToast('Default password is: password123', 'info')}
                   className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
                   Forgot password?

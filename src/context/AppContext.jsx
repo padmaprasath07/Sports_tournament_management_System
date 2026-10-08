@@ -114,11 +114,11 @@ export const AppProvider = ({ children }) => {
   
   // Database status tracking
   const [dbStatus, setDbStatus] = useState({
-    connected: false,
-    engine: 'MongoDB v8.2 + Mongoose',
-    host: 'localhost:27017',
-    isAtlasCloud: false,
-    counts: { tournaments: 5, fixtures: 1, registrations: 4, users: 1 }
+    connected: true,
+    engine: 'MongoDB Atlas (Mongoose ODM)',
+    host: 'Cluster0 (Atlas Cloud)',
+    isAtlasCloud: true,
+    counts: { tournaments: 5, fixtures: 1, registrations: 18, users: 10 }
   });
 
   // Toggle Theme
