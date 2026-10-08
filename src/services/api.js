@@ -1,14 +1,25 @@
 // SportPulse API Service - Connects React Frontend to Express & MongoDB Backend
 const resolveApiBaseUrl = () => {
+  // If running in browser on Vercel, the app's native serverless /api is directly available
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname.endsWith('.vercel.app')) {
+      return '/api';
+    }
+  }
+
   let base = import.meta.env.VITE_API_BASE_URL;
   if (base && typeof base === 'string' && base.trim()) {
-    base = base.trim().replace(/\/+$/, ''); // strip trailing slashes
-    if (!base.endsWith('/api')) {
-      base = `${base}/api`; // ensure /api endpoint prefix is present
+    let clean = base.trim().replace(/\/+$/, '');
+    // If it points to the documentation placeholder, ignore and use native /api
+    if (clean.includes('sportpulse-api.onrender.com')) {
+      return '/api';
     }
-    return base;
+    if (!clean.endsWith('/api')) {
+      clean = `${clean}/api`;
+    }
+    return clean;
   }
-  // Standard relative /api endpoint works seamlessly both in Vite dev (via proxy)
+  // Standard relative /api endpoint works seamlessly in Vite dev (via proxy)
   // and in production on Vercel serverless function!
   return '/api';
 };
@@ -16,10 +27,11 @@ const resolveApiBaseUrl = () => {
 const API_BASE_URL = resolveApiBaseUrl();
 
 /**
- * Helper to make HTTP requests with timeout
+ * Helper to make HTTP requests with timeout and resilient relative fallback
  */
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const primaryBase = resolveApiBaseUrl();
+  const url = `${primaryBase}${endpoint}`;
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -29,7 +41,7 @@ async function request(endpoint, options = {}) {
   };
 
   const controller = new AbortController();
-  // 60s timeout accommodates Render free-tier cold starts (spins up in ~30-45s) and Atlas connection
+  // 60s timeout accommodates cold starts
   const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
@@ -40,6 +52,13 @@ async function request(endpoint, options = {}) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      // If external URL failed with 404 or 5xx, retry with native /api
+      if (primaryBase !== '/api' && (response.status === 404 || response.status >= 500)) {
+        try {
+          const fallbackRes = await fetch(`/api${endpoint}`, { ...config });
+          if (fallbackRes.ok) return await fallbackRes.json();
+        } catch {}
+      }
       const errorBody = await response.json().catch(() => ({}));
       throw new Error(errorBody.error || `HTTP ${response.status}: ${response.statusText}`);
     }
@@ -47,10 +66,17 @@ async function request(endpoint, options = {}) {
     return await response.json();
   } catch (err) {
     clearTimeout(timeoutId);
+    // If network error occurred with external base, retry with native /api
+    if (primaryBase !== '/api') {
+      try {
+        const fallbackRes = await fetch(`/api${endpoint}`, { ...config });
+        if (fallbackRes.ok) return await fallbackRes.json();
+      } catch {}
+    }
     if (err.name !== 'AbortError') {
       console.info(`[SportPulse API Sync Note: ${endpoint}]`, err.message);
     } else {
-      console.warn(`[SportPulse API Timeout: ${endpoint}] Backend cold-start or request timed out after 60s.`);
+      console.warn(`[SportPulse API Timeout: ${endpoint}] Request timed out after 60s.`);
     }
     throw err;
   }
